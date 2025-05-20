@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Supabase Test</title>
+</head>
+<body>
+  <h1>Supabase Test</h1>
+  <pre id="output">Memuat data...</pre>
+
+  <!-- ✅ Pastikan CDN dimuat SEBELUM script kamu -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+  <script>
+    // ✅ Tunggu sampai semuanya tersedia
+    window.addEventListener('DOMContentLoaded', async () => {
+      const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
+      const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
+
+      const { data, error } = await supabase.from('user').select('*')
+
+      if (error) {
+        console.error('Error:', error)
+        document.getElementById('output').innerText = 'Error: ' + error.message
+      } else {
+        console.log('Data:', data)
+        document.getElementById('output').innerText = JSON.stringify(data, null, 2)
+      }
+    })
+  </script>
+</body>
+</html>

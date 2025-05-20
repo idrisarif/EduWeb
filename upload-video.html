@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Upload Video atau Input URL</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+<body>
+  <h1>Upload Video atau Masukkan URL Video</h1>
+
+  <input type="text" id="judul" placeholder="Judul Video" /><br/>
+  <textarea id="deskripsi" placeholder="Deskripsi"></textarea><br/>
+
+  <label>Pilih file video dari komputer:</label><br/>
+  <input type="file" id="fileVideo" accept="video/*" /><br/>
+
+  <label>Atau masukkan URL video (YouTube, dll):</label><br/>
+  <input type="url" id="urlVideo" placeholder="https://youtube.com/..." /><br/>
+
+  <button onclick="uploadAtauSimpan()">Upload / Simpan</button>
+
+  <script>
+    const supabaseUrl = 'https://PROJECT.supabase.co'; // Ganti dengan URL projectmu
+    const supabaseKey = 'YOUR_PUBLIC_ANON_KEY';        // Ganti dengan public anon key
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    async function uploadAtauSimpan() {
+      const judul = document.getElementById('judul').value;
+      const deskripsi = document.getElementById('deskripsi').value;
+      const fileInput = document.getElementById('fileVideo');
+      const urlInput = document.getElementById('urlVideo').value.trim();
+
+      if (!judul) return alert('Judul wajib diisi');
+
+      if (fileInput.files.length > 0) {
+        // Upload file video ke storage
+        const file = fileInput.files[0];
+        const filePath = `video-files/${Date.now()}-${file.name}`;
+
+        const { data, error } = await supabase.storage
+          .from('video-files')
+          .upload(filePath, file);
+
+        if (error) {
+          console.error(error);
+          return alert('Gagal upload file video');
+        }
+
+        const { publicURL } = supabase.storage
+          .from('video-files')
+          .getPublicUrl(filePath);
+
+        // Simpan ke tabel video dengan source_type 'storage'
+        const { error: insertError } = await supabase.from('video').insert([
+          { judul, deskripsi, file_url: publicURL, source_type: 'storage' }
+        ]);
+
+        if (insertError) {
+          console.error(insertError);
+          return alert('Gagal menyimpan data video');
+        }
+
+        alert('Video berhasil diupload dan disimpan');
+      } else if (urlInput) {
+        // Simpan URL video langsung ke tabel video dengan source_type 'url'
+        const { error: insertError } = await supabase.from('video').insert([
+          { judul, deskripsi, file_url: urlInput, source_type: 'url' }
+        ]);
+
+        if (insertError) {
+          console.error(insertError);
+          return alert('Gagal menyimpan URL video');
+        }
+
+        alert('URL video berhasil disimpan');
+      } else {
+        alert('Pilih file video atau masukkan URL video terlebih dahulu');
+      }
+
+      // Reset form
+      document.getElementById('judul').value = '';
+      document.getElementById('deskripsi').value = '';
+      fileInput.value = '';
+      document.getElementById('urlVideo').value = '';
+    }
+  </script>
+</body>
+</html>

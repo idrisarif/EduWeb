@@ -1,0 +1,23 @@
+<button onclick="showTab('materi')">Materi</button>
+<button onclick="showTab('video')">Video</button>
+<button onclick="showTab('tugas')">Tugas</button>
+
+<div id="materi" style="display:block">
+  <!-- Form upload materi -->
+</div>
+
+<div id="video" style="display:none">
+  <!-- Form upload video -->
+</div>
+
+<div id="tugas" style="display:none">
+  <!-- Form upload tugas -->
+</div>
+
+<script>
+function showTab(tabName) {
+  ['materi','video','tugas'].forEach(id => {
+    document.getElementById(id).style.display = id === tabName ? 'block' : 'none';
+  });
+}
+</script>

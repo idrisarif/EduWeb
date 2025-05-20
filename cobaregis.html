@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Register - Supabase</title>
+</head>
+<body>
+  <h2>Register User</h2>
+  <form id="register-form">
+    <input type="email" id="email" placeholder="Email" required /><br />
+    <input type="password" id="password" placeholder="Password" required /><br />
+    <button type="submit">Register</button>
+  </form>
+
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // Ganti dengan info dari Supabase Project kamu
+    const SUPABASE_URL = 'https://kwahwerhxkqpnhxllavm.supabase.co'; // Ganti ini
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'; // Ganti ini
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Tunggu halaman dimuat
+    window.addEventListener('DOMContentLoaded', function () {
+      const form = document.getElementById('register-form');
+
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        const { data, error } = await supabaseClient.auth.signUp({
+          email: email,
+          password: password,
+        });
+
+        if (error) {
+          alert('❌ Gagal register: ' + error.message);
+        } else {
+          alert('✅ Berhasil register! Silakan cek email untuk verifikasi.');
+          form.reset();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

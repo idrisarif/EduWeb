@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>CRUD Materi - Supabase</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    body { font-family: Arial; max-width: 600px; margin: auto; padding: 20px; }
+    input, textarea { width: 100%; margin-bottom: 10px; }
+    button { margin-right: 5px; }
+    .materi { border-bottom: 1px solid #ccc; padding: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>CRUD Materi - Supabase</h1>
+
+  <!-- Form Tambah Materi -->
+  <input id="judul" placeholder="Judul" />
+  <textarea id="deskripsi" placeholder="Deskripsi"></textarea>
+  <input id="file_url" placeholder="File URL (PDF/Word)" />
+  <button onclick="tambahMateri()">Tambah Materi</button>
+
+  <hr>
+  <h2>Daftar Materi</h2>
+  <div id="materi-list"></div>
+
+  <script>
+    // 🔐 Ganti dengan kredensial Supabase milikmu
+    const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg';
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    // 🔁 Ambil semua data materi
+    async function getMateri() {
+      const { data, error } = await supabase.from('materi').select('*').order('created_at', { ascending: false });
+      const container = document.getElementById('materi-list');
+      container.innerHTML = '';
+
+      data.forEach(m => {
+        container.innerHTML += `
+          <div class="materi" id="m-${m.id}">
+            <b>${m.judul}</b><br/>
+            <small>${m.deskripsi}</small><br/>
+            <a href="${m.file_url}" target="_blank">Lihat File</a><br/>
+            <button onclick="editMateri('${m.id}', '${m.judul}', \`${m.deskripsi}\`, '${m.file_url}')">Edit</button>
+            <button onclick="hapusMateri('${m.id}')">Hapus</button>
+          </div>
+        `;
+      });
+    }
+
+    // ➕ Tambah data
+    async function tambahMateri() {
+      const judul = document.getElementById('judul').value;
+      const deskripsi = document.getElementById('deskripsi').value;
+      const file_url = document.getElementById('file_url').value;
+
+      const { error } = await supabase.from('materi').insert([{ judul, deskripsi, file_url }]);
+      if (error) return alert('Gagal menambah data');
+      alert('Berhasil!');
+      getMateri();
+    }
+
+    // ✏️ Edit data (popup form simple)
+    async function editMateri(id, judul, deskripsi, file_url) {
+      const newJudul = prompt('Edit Judul:', judul);
+      const newDeskripsi = prompt('Edit Deskripsi:', deskripsi);
+      const newFile = prompt('Edit File URL:', file_url);
+
+      const { error } = await supabase
+        .from('materi')
+        .update({ judul: newJudul, deskripsi: newDeskripsi, file_url: newFile })
+        .eq('id', id);
+
+      if (error) return alert('Gagal update data');
+      alert('Update berhasil!');
+      getMateri();
+    }
+
+    // 🗑️ Hapus data
+    async function hapusMateri(id) {
+      const ok = confirm('Yakin mau hapus?');
+      if (!ok) return;
+
+      const { error } = await supabase.from('materi').delete().eq('id', id);
+      if (error) return alert('Gagal hapus');
+      alert('Data dihapus!');
+      getMateri();
+    }
+
+    getMateri();
+  </script>
+</body>
+</html
