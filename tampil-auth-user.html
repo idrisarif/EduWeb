@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Daftar Semua Pengguna</title>
+</head>
+<body>
+
+  <h2>Daftar Semua Pengguna</h2>
+  <table border="1">
+    <thead>
+      <tr>
+        <th>ID Auth</th>
+        <th>Nama</th>
+        <th>Email</th>
+        <th>Role</th>
+      </tr>
+    </thead>
+    <tbody id="userTableBody">
+      <!-- Data user akan ditampilkan di sini -->
+    </tbody>
+  </table>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js'
+
+    const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzE4NDg5NSwiZXhwIjoyMDYyNzYwODk1fQ.Q4sfGcahZ6QwJNdKZdwaI_FxyIFC5zvaUkAZgTb8Nx8' // ganti dengan anon/public key kamu
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    async function loadAllUsers() {
+      const { data, error } = await supabase
+        .from('user')
+        .select('*') // pastikan kolom: id_auth, nama, email, role
+
+      if (error) {
+        alert('Gagal mengambil data user: ' + error.message)
+        return
+      }
+
+      const tableBody = document.getElementById('userTableBody')
+      tableBody.innerHTML = ''
+
+      data.forEach(user => {
+        const row = document.createElement('tr')
+        row.innerHTML = `
+          <td>${user.id_auth}</td>
+          <td>${user.nama}</td>
+          <td>${user.email}</td>
+          <td>${user.role}</td>
+        `
+        tableBody.appendChild(row)
+      })
+    }
+
+    loadAllUsers()
+  </script>
+</body>
+</html>

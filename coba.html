@@ -1,47 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Login Page</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-</head>
-<body>
-  <h2>Login</h2>
-  <form id="login-form">
-    <input type="email" id="email" placeholder="Email" required />
-    <input type="password" id="password" placeholder="Password" required />
-    <button type="submit">Login</button>
-  </form>
+<!-- Tombol Tambah -->
+<button id="openModalBtn">Tambah +</button>
 
-  <script>
-    // Ganti dengan URL dan API key kamu
-    window.addEventListener('DOMContentLoaded', async () => {
-        const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
+<!-- Modal -->
+<div id="userModal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h3>Tambah User</h3>
+    <form id="userForm">
+      <input type="text" name="nama" placeholder="Nama Lengkap" required>
+      <input type="email" name="email" placeholder="Email" required>
+      <select name="role" required>
+        <option value="">Pilih Role</option>
+        <option value="Siswa">Siswa</option>
+        <option value="Guru">Guru</option>
+      </select>
+      <button type="submit">Simpan</button>
+    </form>
+  </div>
+</div>
 
-    const loginForm = document.getElementById('login-form');
-
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) {
-        alert('Login gagal: ' + error.message);
-      } else {
-        alert('Login berhasil!');
-        // Redirect atau simpan token jika perlu
-        window.location.href = "/home.html";
+<script>
+    const modal = document.getElementById("userModal");
+    const btn = document.getElementById("openModalBtn");
+    const span = document.querySelector(".close");
+  
+    // Saat tombol diklik, tampilkan modal
+    btn.onclick = function() {
+      modal.style.display = "block";
+    }
+  
+    // Saat X diklik, sembunyikan modal
+    span.onclick = function() {
+      modal.style.display = "none";
+    }
+  
+    // Klik di luar modal, tutup juga
+    window.onclick = function(event) {
+      if (event.target === modal) {
+        modal.style.display = "none";
       }
-    });
-    })
+    }
   </script>
-</body>
-</html>

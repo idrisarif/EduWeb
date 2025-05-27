@@ -7,7 +7,11 @@
    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
    <title>Masuk Akun</title>
    <!-- menggubah ikon tab website <link rel="icon" type="image/png" href="images/favicon.png">-->
+
+   <!-- font awesome cdn link  -->
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+
+   <!-- custom css file link  -->
    <link rel="stylesheet" href="css/style.css">
 
 </head>
@@ -29,9 +33,10 @@
 
 <script src="js/script.js"></script>
 
-<script type="module">
-   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
+
+<script>
+   // Ganti dengan URL dan API key kamu
    window.addEventListener('DOMContentLoaded', async () => {
        const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
@@ -54,9 +59,13 @@
        alert('Login gagal: ' + error.message);
        return
      } else {
- 
+       alert('Login Berhasil!');
+       // Redirect atau simpan token jika perlu
+       //window.location.href = "/home.html";
+     
        const userId = loginData.user.id
-  
+   
+       // 2. Ambil role user dari tabel "user"
        const { data: userData, error: userError } = await supabase
        .from('user')
        .select('role, nama')
@@ -71,9 +80,10 @@
      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
      if (data && data.user) {
+       // Tunggu session benar-benar aktif
        const sessionCheck = await supabase.auth.getSession()
        if (sessionCheck.data.session) {
-         window.location.href = 'home.html'
+         window.location.href = 'crud-materi-tester.html'
        }
      } else {
        alert('Login Gagal!')
@@ -87,7 +97,7 @@
       if (userData.role == 'Siswa'){
         window.location.href = 'home.html' 
       } else {
-        window.location.href = 'admin.html'
+        window.location.href = 'crud-materi-tester.html'
       }
              
          }

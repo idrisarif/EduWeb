@@ -1,0 +1,21 @@
+<div id="daftarMateri"></div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+const supabase = createClient('https://kwahwerhxkqpnhxllavm.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg');
+
+const { data: materiList, error } = await supabase.from('materi').select('*').order('created_at', { ascending: false });
+
+const container = document.getElementById('daftarMateri');
+materiList.forEach(m => {
+  const card = document.createElement('div');
+  card.innerHTML = `
+    <h3>${m.judul}</h3>
+    <p>${m.deskripsi}</p>
+    <a href="${m.file_url}" target="_blank">📄 Lihat Materi</a>
+    <hr/>
+  `;
+  container.appendChild(card);
+});
+</script>

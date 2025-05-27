@@ -4,13 +4,153 @@
    <meta charset="UTF-8">
    <meta http-equiv="X-UA-Compatible" content="IE=edge">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Daftar Tugas</title>
-
-   <!-- font awesome cdn link  -->
+   <title>Data User</title>
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
-
-   <!-- custom css file link  -->
    <link rel="stylesheet" href="css/style.css">
+
+   <script type="module">
+      import { createClient } from 'https://esm.sh/@supabase/supabase-js'
+  
+      const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
+      const supabase = createClient(supabaseUrl, supabaseKey)
+
+      window.addEventListener('DOMContentLoaded', async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+  
+        if (session) {
+         console.log('Login OK:', session.user.email)
+       } else {
+         supabase.auth.onAuthStateChange((event, session) => {
+           if (!session) {
+             window.location.href = 'login.html'
+           }
+          })
+        }
+      })
+
+      const logoutBtn = document.getElementById('logoutBtn')
+      
+      logoutBtn.addEventListener('click', async () => {
+         const { error } = await supabase.auth.signOut()
+         if (error) {
+            alert('Gagal logout: ' + error.message)
+            return
+         }
+         localStorage.clear()
+         window.location.href = 'login.html'
+      })
+      document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
+
+      async function loadAllUsers() {
+         const { data, error } = await supabase
+           .from('user')
+           .select('*')
+           .eq ('role','Siswa')
+   
+         if (error) {
+           console.error('Error load data:', error)
+           return
+         }
+   
+         const tableBody = document.getElementById('userTableBody')
+         tableBody.innerHTML = ''
+   
+         data.forEach(user => {
+           const row = document.createElement('tr')
+           row.innerHTML = `
+           <td>${user.nama}</td> 
+           <td>${user.email}</td>
+           <td>${user.role}</td>              
+           <td>
+            <button onclick="editUser('${user.user_id}')">Edit</button>
+            <button onclick="deleteUser('${user.user_id}')">Hapus</button>
+          </td>
+           `
+           tableBody.appendChild(row)
+         })
+       }
+
+       loadAllUsers()
+
+       let editingUserId = null
+
+       // Fungsi hapus user
+window.deleteUser = async function(id) {
+  const { error } = await supabase
+    .from('user')
+    .delete()
+    .eq('user_id', id)
+
+  if (error) {
+    alert('Gagal menghapus user: ' + error.message)
+    return
+  }
+
+  alert('User berhasil dihapus!')
+  await loadAllUsers()
+}
+
+window.editUser = async function(id) {
+  const { data, error } = await supabase
+    .from('user')
+    .select('*')
+    .eq('user_id', id)
+    .single()
+
+  if (error) {
+    alert('Gagal mengambil data user: ' + error.message)
+    return
+  }
+
+  document.querySelector('#userForm [name="nama"]').value = data.nama
+  document.querySelector('#userForm [name="email"]').value = data.email
+  document.querySelector('#userForm [name="role"]').value = data.role
+
+  document.getElementById("userModalTitle").innerText = "Edit User"
+  editingUserId = id
+  modal.style.display = "block"
+}
+
+const userForm = document.getElementById('userForm')
+userForm.addEventListener('submit', async function(e) {
+  e.preventDefault()
+  const formData = new FormData(userForm)
+  const userData = Object.fromEntries(formData.entries())
+
+  let error
+
+  if (editingUserId) {
+    // Mode edit
+    const res = await supabase
+      .from('user')
+      .update(userData)
+      .eq('user_id', editingUserId)
+
+    error = res.error
+    editingUserId = null  // Reset setelah selesai edit
+  } else {
+    // Mode tambah
+    const res = await supabase
+      .from('user')
+      .insert([userData])
+
+    error = res.error
+  }
+
+  if (error) {
+    alert('Gagal menyimpan user: ' + error.message)
+    return
+  }
+
+  alert('User berhasil disimpan!')
+  modal.style.display = "none"
+  await loadAllUsers()
+  userForm.reset()
+})
+
+
+    </script>
 
 </head>
 <body>
@@ -28,13 +168,10 @@
          </div>
    
          <div class="profile">
-            <img src="images/pic-1.jpg" class="image" alt="">
-            <h3 class="name">Admin</h3>
-            <p class="role">Guru</p>
-            <div class="flex-btn">
-               <a href="login.html" class="option-btn">Masuk</a>
-               <a href="register.html" class="option-btn">Daftar</a>
-            </div>
+            <p class="role">Halo<p>
+            <h3 class="name" id="userName"></h3>
+            <p><span id="role"></span>
+               <a id="logoutBtn" class="delete-btn">Keluar</a>
          </div>
    
       </section>
@@ -62,179 +199,66 @@
          <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
       </nav>
    
-   </div>
-
-<section class="courses">
-
-   <h1 class="heading">Data Siswa</h1>
-
-   <div class="box-container">
-
-      <div class="box">
-         <div class="tutor">
-            <img src="images/pic-2.jpg" alt="">
-            <div class="info">
-               <h3>john deo</h3>
-               <span>21-10-2022</span>
-            </div>
-         </div>
-         <div class="thumb">
-            <img src="images/thumb-1.png" alt="">
-            <span>10 videos</span>
-         </div>
-         <h3 class="title">complete HTML tutorial</h3>
-         <a href="playlist.html" class="inline-btn">view playlist</a>
+   </div>   
+     <div>
+      <button id="openModalBtn">Tambah +</button>
+      <div id="userModal" class="modal">
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <h3 id="userModalTitle">Tambah User</h3>
+          <form id="userForm">
+            <input type="text" name="nama" placeholder="Nama Lengkap" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <select name="role" required>
+              <option value="">Pilih Role</option>
+              <option value="Siswa">Siswa</option>
+              <option value="Guru">Guru</option>
+            </select>
+            <button type="submit">Simpan</button>
+          </form>
+        </div>
       </div>
+      
+      <script>
+          const modal = document.getElementById("userModal");
+          const btn = document.getElementById("openModalBtn");
+          const span = document.querySelector(".close");
+        
+          btn.onclick = function() {
+            document.getElementById("userModalTitle").innerText = "Tambah User";
+            editingUserId = null;
+            userForm.reset();
+            modal.style.display = "block";
+          }
+        
+          span.onclick = function() {
+            modal.style.display = "none";
+            editingUserId = null
+          }
 
-      <div class="box">
-         <div class="tutor">
-            <img src="images/pic-3.jpg" alt="">
-            <div class="info">
-               <h3>john deo</h3>
-               <span>21-10-2022</span>
-            </div>
-         </div>
-         <div class="thumb">
-            <img src="images/thumb-2.png" alt="">
-            <span>10 videos</span>
-         </div>
-         <h3 class="title">complete CSS tutorial</h3>
-         <a href="playlist.html" class="inline-btn">view playlist</a>
-      </div>
+          window.onclick = function(event) {
+            if (event.target === modal) {
+              modal.style.display = "none";
+              editingUserId = null
+            }
+          }
+        </script>
+     </div>
+   
+     <table>
+       <thead>
+         <tr>
+           <th>Nama</th>
+           <th>Email</th>
+           <th>Role</th>
+           <th>Aksi</th>
+         </tr>
+       </thead>
+       <tbody id="userTableBody">
+       </tbody>
+     </table>
 
-      <div class="box">
-         <div class="tutor">
-            <img src="images/pic-4.jpg" alt="">
-            <div class="info">
-               <h3>john deo</h3>
-               <span>21-10-2022</span>
-            </div>
-         </div>
-         <div class="thumb">
-            <img src="images/thumb-3.png" alt="">
-            <span>10 videos</span>
-         </div>
-         <h3 class="title">complete JS tutorial</h3>
-         <a href="playlist.html" class="inline-btn">view playlist</a>
-      </div>
-
-      <div class="box">
-         <div class="tutor">
-            <img src="images/pic-5.jpg" alt="">
-            <div class="info">
-               <h3>john deo</h3>
-               <span>21-10-2022</span>
-            </div>
-         </div>
-         <div class="thumb">
-            <img src="images/thumb-4.png" alt="">
-            <span>10 videos</span>
-         </div>
-         <h3 class="title">complete Boostrap tutorial</h3>
-         <a href="playlist.html" class="inline-btn">view playlist</a>
-      </div>
-
-      <div class="box">
-         <div class="tutor">
-            <img src="images/pic-6.jpg" alt="">
-            <div class="info">
-               <h3>john deo</h3>
-               <span>21-10-2022</span>
-            </div>
-         </div>
-         <div class="thumb">
-            <img src="images/thumb-5.png" alt="">
-            <span>10 videos</span>
-         </div>
-         <h3 class="title">complete JQuery tutorial</h3>
-         <a href="playlist.html" class="inline-btn">view playlist</a>
-      </div>
-
-      <div class="box">
-         <div class="tutor">
-            <img src="images/pic-7.jpg" alt="">
-            <div class="info">
-               <h3>john deo</h3>
-               <span>21-10-2022</span>
-            </div>
-         </div>
-         <div class="thumb">
-            <img src="images/thumb-6.png" alt="">
-            <span>10 videos</span>
-         </div>
-         <h3 class="title">complete SASS tutorial</h3>
-         <a href="playlist.html" class="inline-btn">view playlist</a>
-      </div>
-
-      <div class="box">
-         <div class="tutor">
-            <img src="images/pic-8.jpg" alt="">
-            <div class="info">
-               <h3>john deo</h3>
-               <span>21-10-2022</span>
-            </div>
-         </div>
-         <div class="thumb">
-            <img src="images/thumb-7.png" alt="">
-            <span>10 videos</span>
-         </div>
-         <h3 class="title">complete PHP tutorial</h3>
-         <a href="playlist.html" class="inline-btn">view playlist</a>
-      </div>
-
-      <div class="box">
-         <div class="tutor">
-            <img src="images/pic-9.jpg" alt="">
-            <div class="info">
-               <h3>john deo</h3>
-               <span>21-10-2022</span>
-            </div>
-         </div>
-         <div class="thumb">
-            <img src="images/thumb-8.png" alt="">
-            <span>10 videos</span>
-         </div>
-         <h3 class="title">complete MySQL tutorial</h3>
-         <a href="playlist.html" class="inline-btn">view playlist</a>
-      </div>
-
-      <div class="box">
-         <div class="tutor">
-            <img src="images/pic-1.jpg" alt="">
-            <div class="info">
-               <h3>john deo</h3>
-               <span>21-10-2022</span>
-            </div>
-         </div>
-         <div class="thumb">
-            <img src="images/thumb-9.png" alt="">
-            <span>10 videos</span>
-         </div>
-         <h3 class="title">complete react tutorial</h3>
-         <a href="playlist.html" class="inline-btn">view playlist</a>
-      </div>
-
-   </div>
-
-</section>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- custom js file link  -->
 <script src="js/script.js"></script>
-
    
 </body>
 </html>

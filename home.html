@@ -12,6 +12,47 @@
    <!-- custom css file link  -->
    <link rel="stylesheet" href="css/style.css">
 
+   <script type="module">
+      import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  
+      const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
+      const supabase = createClient(supabaseUrl, supabaseKey)
+  
+      // Saat halaman dimuat
+      window.addEventListener('DOMContentLoaded', async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+  
+        if (session) {
+         // ✅ Session ada, boleh akses halaman
+         console.log('Login OK:', session.user.email)
+       } else {
+         // 🕓 Cek ulang jika session belum tersedia
+         supabase.auth.onAuthStateChange((event, session) => {
+           if (!session) {
+             window.location.href = 'login.html'
+           }
+          })
+        }
+      })
+
+      const logoutBtn = document.getElementById('logoutBtn')
+      
+      logoutBtn.addEventListener('click', async () => {
+         const { error } = await supabase.auth.signOut()
+         if (error) {
+            alert('Gagal logout: ' + error.message)
+            return
+         }
+         // Hapus data dari localStorage (jika ada)
+         localStorage.clear()
+         // Arahkan ke halaman login
+         window.location.href = 'login.html'
+      })
+      document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
+
+    </script>
+   
 </head>
 <body>
 
@@ -28,13 +69,10 @@
       </div>
 
       <div class="profile">
-         <img src="images/pic-1.jpg" class="image" alt="">
-         <h3 class="name">Idris</h3>
-         <p class="role">Siswa</p>
-         <div class="flex-btn">
-            <a href="login.html" class="option-btn">Masuk</a>
-            <a href="register.html" class="option-btn">Daftar</a>
-         </div>
+         <p class="role">Halo<p>
+         <h3 class="name" id="userName"></h3>
+         <p><span id="role"></span>
+            <a id="logoutBtn" class="delete-btn">Keluar</a>
       </div>
 
    </section>

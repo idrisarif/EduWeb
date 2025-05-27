@@ -4,7 +4,7 @@
    <meta charset="UTF-8">
    <meta http-equiv="X-UA-Compatible" content="IE=edge">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Data Video</title>
+   <title>Data Jawaban</title>
 
    <!-- font awesome cdn link  -->
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
@@ -54,9 +54,9 @@
 
       async function loadAllUsers() {
          const { data, error } = await supabase
-           .from('video')
+           .from('jawaban')
            .select('*')
-              
+   
          if (error) {
            return
          }
@@ -174,9 +174,9 @@
      <table>
        <thead>
          <tr>
-           <th>Nama</th>
-           <th>Email</th>
-           <th>Role</th>
+           <th>Judul</th>
+           <th>Deskripsi</th>
+           <th>File Path</th>
            <th>Aksi</th>
          </tr>
        </thead>
@@ -184,6 +184,26 @@
          <!-- Data user akan dimuat di sini -->
        </tbody>
      </table>
+
+
+<!-- custom js file link  -->
+<script src="js/script.js"></script>
+
+   
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 <!-- custom js file link  -->

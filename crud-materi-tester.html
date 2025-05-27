@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>EduWeb</title>
+
+   <!-- font awesome cdn link  -->
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+
+   <!-- custom css file link  -->
+   <link rel="stylesheet" href="css/style.css">
+
+   <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  
+    const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
+    const supabase = createClient(supabaseUrl, supabaseKey);
+  
+    window.addEventListener('DOMContentLoaded', async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log('Login OK:', session.user.email);
+      } else {
+        supabase.auth.onAuthStateChange((event, session) => {
+          if (!session) window.location.href = 'login.html';
+        });
+      }
+    });
+  
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+  
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        alert('Anda belum login!');
+        return;
+      }
+  
+      const judul = document.getElementById('judul').value;
+      const deskripsi = document.getElementById('deskripsi').value;
+      const file = document.getElementById('fileInput').files[0];
+  
+      if (!file || file.type !== 'application/pdf') {
+        alert('File harus berupa PDF.');
+        return;
+      }
+  
+      const fileName = `${Date.now()}_${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('materi')
+        .upload(fileName, file);
+  
+      if (uploadError) {
+        alert('Gagal upload file: ' + uploadError.message);
+        return;
+      }
+  
+      const { data: publicData } = supabase.storage
+        .from('materi')
+        .getPublicUrl(fileName);
+  
+      const file_url = publicData.publicUrl;
+  
+      const { error: insertError } = await supabase.from('materi').insert([{
+        judul,
+        deskripsi,
+        file_url,
+        guru_id: user.id,
+        created_at: new Date().toISOString()
+      }]);
+  
+      if (insertError) {
+        alert('Gagal simpan ke database: ' + insertError.message);
+      } else {
+        alert('Materi berhasil diupload!');
+        document.getElementById('uploadForm').reset();
+      }
+    });
+  </script>
+   
+</head>
+<body>
+    <h2>Upload Materi Guru</h2>
+  <form id="uploadForm">
+    <input type="text" id="judul" placeholder="Judul Materi" required /><br><br>
+    <textarea id="deskripsi" placeholder="Deskripsi Materi"></textarea><br><br>
+    <input type="file" id="fileInput" accept="application/pdf" required /><br><br>
+    <button type="submit" class="btn">Upload</button>
+  </form>
+     
+  </body>
+  </html>
+
+
+<!-- custom js file link  -->
+<script src="js/script.js"></script>
+
+</body>
+</html>
