@@ -78,7 +78,6 @@ section{
 .inline-option-btn,
 .inline-delete-btn,
 .btn,
-.delete-btn,
 .option-btn{
    border-radius: .5rem;
    color:#fff;
@@ -89,11 +88,25 @@ section{
    text-align: center;
    margin-top: 1rem;
 }
+.delete-btn{
+   border-radius: .5rem;
+   color:#fff;
+   font-size: 1.8rem;
+   cursor: pointer;
+   text-transform: capitalize;
+   padding:0.5rem 2rem;
+   text-align: center;
+   margin-top: 1rem;
+}
+
 
 .btn,
-.delete-btn,
 .option-btn{
    display: block;
+   width: 100%;
+}
+.delete-btn{
+   display: center-block;
    width: 100%;
 }
 
@@ -1375,3 +1388,200 @@ section{
       width: 85%;
       height: 975px;
    }
+ 
+ table {
+   width: 100%;
+   border-collapse: collapse;
+   margin-top: 1rem;
+   background-color: white;
+   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+ }
+
+ body.dark-mode table {
+   background-color: #1e1e1e;
+   color: #f0f0f0;
+ }
+ 
+ body.dark-mode th, 
+ body.dark-mode td {
+   border: 1px solid #444;
+ }
+ 
+ table th, table td {
+   border: 1px solid #ddd;
+   padding: 0.75rem;
+   text-align: middle;
+   font-size: 1.5rem;
+ }
+ 
+ table th {
+   background-color: #f0f0f0;
+   font-weight: bold;
+ }
+ 
+ table tr:hover {
+   background-color: #f9f9f9;
+ }
+ 
+ .table-actions button {
+   background-color: #2196F3;
+   margin-right: 5px;
+ }
+ 
+ .table-actions button.delete {
+   background-color: #f44336;
+ }
+ 
+ .table-actions button:hover {
+   opacity: 0.9;
+ }
+ 
+ @media (max-width: 768px) {
+   table, thead, tbody, th, td, tr {
+     display: block;
+   }
+ 
+   table thead {
+     display: none;
+   }
+ 
+   table tr {
+     margin-bottom: 1rem;
+   }
+ 
+   table td {
+     position: relative;
+     padding-left: 50%;
+   }
+ 
+   table td::before {
+     position: absolute;
+     top: 0;
+     left: 0;
+     width:45%;
+     padding-left: 1rem;
+     font-weight: bold;
+     white-space: nowrap;
+   }
+ 
+   table td:nth-child(1)::before { content: "Nama"; }
+   table td:nth-child(2)::before { content: "Email"; }
+   table td:nth-child(3)::before { content: "Role"; }
+   table td:nth-child(4)::before { content: "Aksi"; }
+ }
+
+ 
+ th:nth-child(1), td:nth-child(1) {
+   width: 35%; /* Nama */
+ }
+
+ th:nth-child(2), td:nth-child(2) {
+   width: 35%; /* Email */
+ }
+
+ th:nth-child(3), td:nth-child(3) {
+   width: 10%; /* Role */
+ }
+
+ th:nth-child(4), td:nth-child(4) {
+   width: 20%; /* Aksi */
+ }
+ 
+ button,
+ input[type="submit"] {
+   background-color: #949494;
+   color: white;
+   padding: 10px 10px;
+   font-size: 14px;
+   border: none;
+   border-radius: 2px;
+   cursor: pointer;
+   transition: background-color 0.3s ease;
+ }
+ 
+ /* Hover tombol */
+ button:hover,
+ input[type="submit"]:hover {
+   background-color: #d4d4d4;
+ }
+ 
+ /* Responsive (opsional) */
+ @media (max-width: 600px) {
+   form {
+     padding: 15px;
+   }
+ }
+
+ /* Tombol Tambah */
+#openModalBtn {
+   padding: 10px 18px;
+   font-size: 16px;
+   background-color: #4A90E2;
+   color: white;
+   border: none;
+   border-radius: 6px;
+   cursor: pointer;
+   text-align: right;
+   margin-top: 10px;
+   margin-right: 10px;
+   margin-left: 10px;
+   display: inline-block;
+ }
+ 
+ /* Modal background */
+ .modal {
+   display: none; /* hidden by default */
+   position: fixed;
+   z-index: 100;
+   left: 0;
+   top: 0;
+   width: 100%;
+   height: 100%;
+   overflow: auto;
+   background-color: rgba(0,0,0,0.4); /* overlay */
+ }
+ 
+ .modal-content h3 {
+   font-size: 20px; 
+   margin-bottom: 15px; 
+   font-weight: bold;   
+ }
+ 
+
+ /* Modal box */
+ .modal-content {
+   background-color: #fff;
+   margin: 10% auto;
+   padding: 20px;
+   border-radius: 10px;
+   width: 400px;
+   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+ }
+ 
+ /* Close (X) */
+ .close {
+   float: right;
+   font-size: 24px;
+   font-weight: bold;
+   cursor: pointer;
+ }
+ 
+ /* Form input di modal */
+ .modal-content input,
+ .modal-content select,
+ .modal-content button {
+   width: 100%;
+   padding: 10px 14px;
+   margin-top: 10px;
+   font-size: 16px;
+   border-radius: 6px;
+   border: 1px solid #ccc;
+   box-sizing: border-box;
+ }
+ 
+ .modal-content button {
+   background-color: #4A90E2;
+   color: white;
+   border: none;
+   margin-top: 16px;
+ }
