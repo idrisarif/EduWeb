@@ -1,0 +1,43 @@
+<!-- Tombol Tambah -->
+<button id="openModalBtn">Tambah +</button>
+
+<!-- Modal -->
+<div id="userModal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h3>Tambah User</h3>
+    <form id="userForm">
+      <input type="text" name="nama" placeholder="Nama Lengkap" required>
+      <input type="email" name="email" placeholder="Email" required>
+      <select name="role" required>
+        <option value="">Pilih Role</option>
+        <option value="Siswa">Siswa</option>
+        <option value="Guru">Guru</option>
+      </select>
+      <button type="submit">Simpan</button>
+    </form>
+  </div>
+</div>
+
+<script>
+    const modal = document.getElementById("userModal");
+    const btn = document.getElementById("openModalBtn");
+    const span = document.querySelector(".close");
+  
+    // Saat tombol diklik, tampilkan modal
+    btn.onclick = function() {
+      modal.style.display = "block";
+    }
+  
+    // Saat X diklik, sembunyikan modal
+    span.onclick = function() {
+      modal.style.display = "none";
+    }
+  
+    // Klik di luar modal, tutup juga
+    window.onclick = function(event) {
+      if (event.target === modal) {
+        modal.style.display = "none";
+      }
+    }
+  </script>

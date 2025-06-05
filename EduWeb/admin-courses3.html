@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Data Tugas</title>
+
+   <!-- font awesome cdn link  -->
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+
+   <!-- custom css file link  -->
+   <link rel="stylesheet" href="css/style.css">
+
+   <script type="module">
+      import { createClient } from 'https://esm.sh/@supabase/supabase-js'
+  
+      const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
+      const supabase = createClient(supabaseUrl, supabaseKey)
+  
+      // Saat halaman dimuat
+      window.addEventListener('DOMContentLoaded', async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+  
+        if (session) {
+         // ✅ Session ada, boleh akses halaman
+         console.log('Login OK:', session.user.email)
+       } else {
+         // 🕓 Cek ulang jika session belum tersedia
+         supabase.auth.onAuthStateChange((event, session) => {
+           if (!session) {
+             window.location.href = 'login.html'
+           }
+          })
+        }
+      })
+
+      const logoutBtn = document.getElementById('logoutBtn')
+      
+      logoutBtn.addEventListener('click', async () => {
+         const { error } = await supabase.auth.signOut()
+         if (error) {
+            alert('Gagal logout: ' + error.message)
+            return
+         }
+         // Hapus data dari localStorage (jika ada)
+         localStorage.clear()
+         // Arahkan ke halaman login
+         window.location.href = 'login.html'
+      })
+      // tampilkan nama dari localStorage
+      document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
+
+      let selectedTugasId = null;
+  
+      async function loadAllTugas() {
+        const { data, error } = await supabase
+          .from('tugas')
+          .select('id_tugas, judul, deskripsi, file_url, user:created_by(nama)');
+      
+        if (error) {
+          console.error('Gagal mengambil data:', error);
+          return;
+        }
+  
+        const tableBody = document.getElementById('tugasTableBody');
+        tableBody.innerHTML = '';
+  
+        data.forEach(tugas => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${tugas.judul}</td>
+            <td>${tugas.deskripsi}</td>
+            <td><a href="${tugas.file_url}" target="_blank">Lihat File</a></td>
+            <td>${tugas.user?.nama || 'Tidak diketahui'}</td>
+            <td><button onclick="openJawabModal('${tugas.id_tugas}')">Jawab</button></td>
+          `;
+          tableBody.appendChild(row);
+        });
+      }
+  
+      window.openJawabModal = function(id_tugas) {
+        selectedTugasId = id_tugas;
+        document.getElementById('jawabanModal').style.display = 'block';
+      }
+  
+      window.closeModal = function() {
+        document.getElementById('jawabanModal').style.display = 'none';
+        document.getElementById('jawabanForm').reset();
+      }
+  
+      document.addEventListener('DOMContentLoaded', () => {
+        loadAllTugas();
+  
+        const form = document.getElementById('jawabanForm');
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const fileInput = document.getElementById('jawabanFile');
+          const file = fileInput.files[0];
+  
+          if (!file) {
+            alert("Silakan pilih file PDF terlebih dahulu.");
+            return;
+          }
+  
+          const namaFile = `${Date.now()}_${file.name.replace(/[^\w.-]/g, '_')}`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('jawaban')
+            .upload(namaFile, file, { upsert: true });
+  
+          if (uploadError) {
+            alert('Gagal upload file: ' + uploadError.message);
+            return;
+          }
+  
+          const { data: publicData } = supabase.storage.from('jawaban').getPublicUrl(namaFile);
+          const fileUrl = publicData.publicUrl;
+  
+          const user = await supabase.auth.getUser();
+          const userId = user.data.user?.id;
+  
+          const { error: insertError } = await supabase.from('jawaban').insert([{
+            id_tugas: selectedTugasId,
+            file_url: fileUrl,
+            created_by: userId
+          }]);
+  
+          if (insertError) {
+            alert('Gagal menyimpan jawaban: ' + insertError.message);
+            return;
+          }
+  
+          alert('Jawaban berhasil dikirim!');
+          closeModal();
+        });
+      });
+    </script>
+</head>
+
+<body>
+
+   <header class="header">
+   
+      <section class="flex">
+   
+         <a href="admin.html" class="logo">EduWeb</a>
+   
+         <div class="icons">
+            <div id="menu-btn" class="fas fa-bars"></div>
+            <div id="user-btn" class="fas fa-user"></div>
+            <div id="toggle-btn" class="fas fa-sun"></div>
+         </div>
+   
+         <div class="profile">
+            <p class="role">Halo<p>
+            <h3 class="name" id="userName"></h3>
+            <p><span id="role"></span>
+               <a id="logoutBtn" class="delete-btn">Keluar</a>
+         </div>
+   
+      </section>
+   
+   </header>
+   
+   <div class="side-bar">
+   
+      <div id="close-btn">
+         <i class="fas fa-times"></i>
+      </div>
+   
+      <div class="profile">
+         <img src="images/pic-1.jpg" class="image" alt="">
+         <h3 class="role">Eduweb</h3>
+   
+         <h2 class="name">Daftar Menu</h2>
+      </div>
+   
+      <nav class="navbar">
+        <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
+        <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
+        <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
+        <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
+        <a href="admin-courses3.html"><i class="fas fa-list"></i><span>Data Jawaban</span></a>
+        <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
+     </nav>
+   
+   </div>   
+     <div>
+      
+      <div id="jawabanModal" class="modal">
+         <div class="modal-content">
+           <span onclick="closeModal()" style="cursor:pointer;float:right;">&times;</span>
+           <h3>Unggah Jawaban</h3>
+           <form id="jawabanForm">
+             <input type="file" id="jawabanFile" accept="application/pdf" required />
+             <button type="submit">Kirim</button>
+           </form>
+         </div>
+       </div>
+      
+      <script>
+          const modal = document.getElementById("tugasModal");
+          const btn = document.getElementById("openModalBtn");
+          const span = document.querySelector(".close");
+
+          document.getElementById('fileInput').style.display = 'block';
+          document.getElementById('fileInput').required = true;
+        
+          btn.onclick = function() {
+            modal.style.display = "block";
+            document.getElementById("tugasModalTitle").innerText = "Tambah Tugas";
+            editingTugasId = null;
+            currentFileUrl = null;
+            tugasForm.reset();
+          
+            // ✅ Tampilkan kembali input file
+            const fileInput = document.getElementById('fileInput');
+            fileInput.style.display = 'block';     // tampilkan lagi
+            fileInput.required = true;             // wajibkan lagi
+            fileInput.value = '';                  // bersihkan jika sebelumnya ada sisa file
+          }
+        
+          span.onclick = function() {
+            modal.style.display = "none";
+          }
+
+          window.onclick = function(event) {
+            if (event.target === modal) {
+              modal.style.display = "none";
+            }
+          }
+        </script>
+     </div>
+   
+     <table>
+       <thead>
+         <tr>
+           <th>Judul</th>
+           <th>Deskripsi</th>
+           <th>File path</th>
+           <th>Dibuat oleh</th>
+           <th>Aksi</th>
+         </tr>
+       </thead>
+       <tbody id="tugasTableBody">
+         <!-- Data user akan dimuat di sini -->
+       </tbody>
+     </table>
+
+<!-- custom js file link  -->
+<script src="js/script.js"></script>
+
+</body>
+</html>

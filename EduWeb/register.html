@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Daftar Akun</title>
+
+   <!-- font awesome cdn link  -->
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+
+   <!-- custom css file link  -->
+   <link rel="stylesheet" href="css/style.css">
+
+</head>
+<body>
+
+<section class="form-container">
+
+   <form id="register-form">
+     <h3>Daftar Akun</h3>
+     <p>Nama Anda <span>*</span></p>
+     <input type="text" name="nama" id="nama" placeholder="Masukkan Nama Anda" required maxlength="50" class="box">
+     <p>Email Anda <span>*</span></p>
+     <input type="email" name="email" id="email" placeholder="Masukkan Email Anda" required maxlength="50" class="box">
+     <p>Kata Sandi <span>*</span></p>
+     <input type="password" name="password" id="password" placeholder="Masukkan Kata Sandi" required maxlength="20" class="box">
+     <p>Konfirmasi Kata Sandi <span>*</span></p>
+     <input type="password" name="c_pass" id="c_pass"placeholder="Konfirmasi Kata Sandi" required maxlength="20" class="box">
+     <button type="submit" class="btn">Daftar</button>
+     <p>Sudah punya akun? <a href="login.html">Masuk di sini</a></p>
+   </form>
+
+</section>
+
+<script type="module">
+   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+   const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co' // Ganti dengan URL Supabase-mu
+   const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'               // Ganti dengan anon/public key Supabase-mu
+   const supabase = createClient(supabaseUrl, supabaseKey)
+ 
+   document.getElementById('register-form').addEventListener('submit', async function (e) {
+      e.preventDefault(); // Mencegah reload halaman
+      await window.register();
+   });
+   
+   window.register = async function () {
+     const nama = document.getElementById('nama').value
+     const email = document.getElementById('email').value
+     const password = document.getElementById('password').value
+
+     const { data, error } = await supabase.auth.signUp({
+       email,
+       password
+     })
+ 
+     if (error) {
+       alert('Gagal daftar: ' + error.message)
+       return
+     }
+ 
+     const userId = data.user?.id
+     if (!userId) {
+       alert('User ID tidak ditemukan')
+       return
+     }
+ 
+     const { error: insertError } = await supabase
+       .from('user')
+       .insert([{ user_id: userId, nama , email}])
+ 
+     if (insertError) {
+       alert('Gagal menyimpan data ke tabel user: ' + insertError.message)
+     } else {
+       alert('Daftar Akun Berhasil!')
+       window.location.href = 'login.html'
+     }
+   }
+ </script>
+
+<!-- custom js file link  -->
+<script src="js/script.js"></script>
+   
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>EduWeb</title>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+   <link rel="stylesheet" href="css/style.css">
+
+   <script type="module">
+      import { createClient } from 'https://esm.sh/@supabase/supabase-js'
+  
+      const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
+      const supabase = createClient(supabaseUrl, supabaseKey)
+  
+      window.addEventListener('DOMContentLoaded', async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+  
+        if (session) {
+         console.log('Login OK:', session.user.email)
+       } else {
+           supabase.auth.onAuthStateChange((event, session) => {
+           if (!session) {
+             window.location.href = 'login.html'
+           }
+          })
+        }
+      })
+
+      const logoutBtn = document.getElementById('logoutBtn')
+      
+      logoutBtn.addEventListener('click', async () => {
+         const { error } = await supabase.auth.signOut()
+         if (error) {
+            alert('Gagal logout: ' + error.message)
+            return
+         }
+         localStorage.clear()
+         window.location.href = 'login.html'
+      })
+      document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
+
+    </script>
+
+
+</head>
+<body>
+
+<header class="header">
+   
+   <section class="flex">
+
+      <a href="admin.html" class="logo">EduWeb</a>
+
+      <div class="icons">
+         <div id="menu-btn" class="fas fa-bars"></div>
+         <div id="user-btn" class="fas fa-user"></div>
+         <div id="toggle-btn" class="fas fa-sun"></div>
+      </div>
+
+      <div class="profile">
+         <p class="role">Halo<p>
+         <h3 class="name" id="userName"></h3>
+         <p><span id="role"></span>
+            <a id="logoutBtn" class="delete-btn">Keluar</a>
+      </div>
+
+   </section>
+
+</header>
+
+<div class="side-bar">
+
+   <div id="close-btn">
+      <i class="fas fa-times"></i>
+   </div>
+
+   <div class="profile">
+      <img src="images/pic-1.jpg" class="image" alt="">
+      <h3 class="role">Eduweb</h3>
+
+      <h2 class="name">Daftar Menu</h2>
+   </div>
+
+   <nav class="navbar">
+      <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
+      <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
+      <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
+      <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
+      <a href="admin-courses3.html"><i class="fas fa-list"></i><span>Data Jawaban</span></a>
+      <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
+   </nav>
+
+</div>
+
+<section class="home-grid">
+
+   <h1 class="heading">Halaman Utama</h1>
+
+   <div class="box-container">
+
+      <div class="box">
+         <h3 class="title">Data Materi</h3>
+         <a href="admin-courses.html" class="inline-btn">Data Materi</a>
+      </div>
+
+      <div class="box">
+         <h3 class="title">Data Video</h3>
+         <a href="admin-playlist.html" class="inline-btn">Data Video</a>
+         
+      </div>
+
+      <div class="box">
+         <h3 class="title">Data Tugas</h3>
+         <a href="admin-courses2.html" class="inline-btn">Data Materi</a>
+         
+       </div>
+
+      <div class="box">
+         <h3 class="title">Data Jawaban</h3>
+         <a href="admin-courses3.html" class="inline-btn">Data Jawaban</a>
+         
+      </div>
+
+      <div class="box">
+         <h3 class="title">Data Siswa</h3>
+         <a href="admin-user.html" class="inline-btn">Data Siswa</a>
+         
+      </div>
+
+   </div>
+
+</section>
+
+<!-- custom js file link  -->
+<script src="js/script.js"></script>
+
+</body>
+</html>

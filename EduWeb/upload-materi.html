@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Upload File Materi</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+<body>
+  <h1>Upload Materi</h1>
+
+  <input type="text" id="judul" placeholder="Judul" /><br/>
+  <textarea id="deskripsi" placeholder="Deskripsi"></textarea><br/>
+  <input type="file" id="file" /><br/>
+  <button onclick="uploadMateri()">Upload</button>
+
+  <script>
+    const supabaseUrl = 'https://PROJECT.supabase.co'; // Ganti dengan project URL kamu
+    const supabaseKey = 'YOUR_PUBLIC_ANON_KEY';        // Ganti dengan anon public key
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    async function uploadMateri() {
+      const judul = document.getElementById('judul').value;
+      const deskripsi = document.getElementById('deskripsi').value;
+      const fileInput = document.getElementById('file');
+      const file = fileInput.files[0];
+
+      if (!file) return alert("Pilih file terlebih dahulu");
+
+      // Nama file unik: timestamp-nama
+      const filePath = `${Date.now()}-${file.name}`;
+
+      // Upload ke bucket bernama 'materi-files'
+      const { data, error } = await supabase.storage
+        .from('materi-files')
+        .upload(filePath, file);
+
+      if (error) {
+        console.error(error);
+        return alert("Gagal upload file");
+      }
+
+      // Ambil URL publik file
+      const { publicURL } = supabase.storage
+        .from('materi-files')
+        .getPublicUrl(filePath);
+
+      // Simpan ke tabel 'materi'
+      const { error: insertError } = await supabase.from('materi').insert([
+        { judul, deskripsi, file_url: publicURL, source_type: 'storage' }
+      ]);
+
+      if (insertError) {
+        console.error(insertError);
+        return alert("Gagal menyimpan ke database");
+      }
+
+      alert("Materi berhasil diupload dan disimpan!");
+      // Reset form
+      document.getElementById('judul').value = '';
+      document.getElementById('deskripsi').value = '';
+      fileInput.value = '';
+    }
+  </script>
+</body>
