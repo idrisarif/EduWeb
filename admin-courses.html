@@ -52,36 +52,199 @@
       // tampilkan nama dari localStorage
       document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
 
-      async function loadAllUsers() {
-         const { data, error } = await supabase
-           .from('user')
-           .select('*')
-           .eq ('role','Siswa')
-   
-         if (error) {
-           return
-         }
-   
-         const tableBody = document.getElementById('userTableBody')
-         tableBody.innerHTML = ''
-   
-         data.forEach(user => {
-           const row = document.createElement('tr')
-           row.innerHTML = `
-           <td>${user.nama}</td> 
-           <td>${user.email}</td>
-           <td>${user.role}</td>              
-           <td>
-            <button onclick="editUser(${user.id})">Edit</button>
-            <button onclick="deleteUser(${user.id})">Hapus</button>
-          </td>
-           `
-           tableBody.appendChild(row)
-         })
-       }
-   
-       loadAllUsers()
+      // Fungsi memuat semua data materi
+      async function loadAllMateri() {
+        const { data, error } = await supabase
+          .from('materi')
+          .select(`
+            id_materi,
+            judul,
+            deskripsi,
+            file_url,
+            created_by,
+            user:created_by (nama)
+          `);
+      
+        if (error) {
+          console.error('Gagal mengambil data:', error);
+          return;
+        }
+      
+        const tableBody = document.getElementById('materiTableBody');
+        tableBody.innerHTML = '';
+      
+        data.forEach(materi => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${materi.judul}</td>
+            <td>${materi.deskripsi}</td>
+            <td><a href="${materi.file_url}" target="_blank">Lihat File</a></td>
+            <td>${materi.user?.nama || 'Tidak diketahui'}</td>
+              <button onclick="editMateri('${materi.id_materi}')">Edit</button>
+              <button onclick="deleteMateri('${materi.id_materi}')">Hapus</button>
+            </td>
+          `;
+          tableBody.appendChild(row);
+        });
+      }
+      
+      loadAllMateri();
+      
+      let editingMateriId = null;
+      let currentFileUrl = null; // menyimpan file_url lama saat edit
+      
+      window.deleteMateri = async function(id) {
+        // Ambil data materi dulu (untuk dapatkan file_url)
+        const { data: materi, error: fetchError } = await supabase
+          .from('materi')
+          .select('file_url')
+          .eq('id_materi', id)
+          .single();
+      
+        if (fetchError) {
+          alert('Gagal mengambil data materi: ' + fetchError.message);
+          return;
+        }
+      
+        // Ekstrak path relatif file (tanpa /storage/v1/object/public/materi/)
+        const fileUrl = materi.file_url;
+        const basePublicUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co/storage/v1/object/public/materi/';
+        
+        let relativePath = fileUrl.replace(basePublicUrl, '').replace(/^\/+/, '').replace(/\/{2,}/g, '/');
+      
+        // Hapus file dari storage
+        const { error: deleteFileError } = await supabase.storage
+          .from('materi')
+          .remove([relativePath]);
+      
+        if (deleteFileError) {
+          alert('Gagal menghapus file dari storage: ' + deleteFileError.message);
+          console.error('Storage remove error:', deleteFileError);
+          return;
+        }
+      
+        // Hapus data dari tabel
+        const { error: deleteMateriError } = await supabase
+          .from('materi')
+          .delete()
+          .eq('id_materi', id);
+      
+        if (deleteMateriError) {
+          alert('Gagal menghapus data materi: ' + deleteMateriError.message);
+          return;
+        }
+      
+        alert('Materi berhasil dihapus!');
+        await loadAllMateri();
+      };      
+      
+      window.editMateri = async function(id) {
+        const { data, error } = await supabase
+          .from('materi')
+          .select('*')
+          .eq('id_materi', id)
+          .single();
+      
+        if (error) {
+          alert('Gagal mengambil data materi: ' + error.message);
+          return;
+        }
+      
+        document.querySelector('#materiForm [name="judul"]').value = data.judul;
+        document.querySelector('#materiForm [name="deskripsi"]').value = data.deskripsi;
+      
+        currentFileUrl = data.file_url;
+        editingMateriId = id;
+        document.getElementById("materiModalTitle").innerText = "Edit Materi";
+        modal.style.display = "block";
+      
+        // Sembunyikan input file dan hilangkan required saat edit
+        document.getElementById('fileInput').style.display = 'none';
+        document.getElementById('fileInput').required = false;
 
+        const fileInput = document.getElementById('fileInput');
+        fileInput.style.display = 'none';      // sembunyikan input file
+        fileInput.required = false;            // tidak wajib
+      }
+      
+      const materiForm = document.getElementById('materiForm');
+      materiForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+      
+        // Tampilkan pesan loading
+        const loadingDiv = document.getElementById('loadingMessage');
+        loadingDiv.style.display = 'block';
+      
+        const formData = new FormData(materiForm);
+        const materiData = Object.fromEntries(formData.entries());
+      
+        let fileUrl = currentFileUrl;
+        const file = document.getElementById('fileInput').files[0];
+      
+        if (file) {
+          const rawName = file.name.replaceAll(/[^\w.\-]/g, '_'); // hilangkan karakter aneh
+          const fileName = `${Date.now()}_${rawName}`; // tanpa slash di depan
+          const { data: uploadData, error: uploadError } = await supabase
+            .storage
+            .from('materi')
+            .upload(fileName, file, { upsert: true });
+        
+      
+          if (uploadError) {
+            alert('Gagal upload file: ' + uploadError.message);
+            loadingDiv.style.display = 'none'; // Sembunyikan pesan loading
+            return;
+          }
+      
+          const { data: publicData } = supabase.storage
+            .from('materi')
+            .getPublicUrl(fileName);
+      
+          fileUrl = publicData.publicUrl;
+        }
+      
+        let error;
+        if (editingMateriId) {
+          const res = await supabase
+            .from('materi')
+            .update({
+              ...materiData,
+              file_url: fileUrl
+            })
+            .eq('id_materi', editingMateriId);
+      
+          error = res.error;
+          if (!error) {
+            editingMateriId = null;
+            currentFileUrl = null;
+          }
+        } else {
+          const res = await supabase
+            .from('materi')
+            .insert([
+              {
+                ...materiData,
+                file_url: fileUrl
+              }
+            ]);
+      
+          error = res.error;
+        }
+      
+        // Sembunyikan pesan loading setelah selesai
+        loadingDiv.style.display = 'none';
+      
+        if (error) {
+          alert('Gagal menyimpan materi: ' + error.message);
+          return;
+        }
+      
+        alert('Materi berhasil disimpan!');
+        modal.style.display = "none";
+        await loadAllMateri();
+        materiForm.reset();
+        document.getElementById('fileInput').value = '';
+      });      
     </script>
 
 </head>
@@ -124,40 +287,53 @@
       </div>
    
       <nav class="navbar">
-         <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
-         <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
-         <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
-         <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
-         <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
-      </nav>
+        <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
+        <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
+        <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
+        <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
+        <a href="admin-courses3.html"><i class="fas fa-list"></i><span>Data Jawaban</span></a>
+        <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
+     </nav>
    
    </div>   
      <div>
       <button id="openModalBtn">Tambah +</button>
-      <div id="userModal" class="modal">
+      <div id="materiModal" class="modal">
         <div class="modal-content">
           <span class="close">&times;</span>
-          <h3>Tambah User</h3>
-          <form id="userForm">
-            <input type="text" name="nama" placeholder="Nama Lengkap" required>
-            <input type="email" name="email" placeholder="Email" required>
-            <select name="role" required>
-              <option value="">Pilih Role</option>
-              <option value="Siswa">Siswa</option>
-              <option value="Guru">Guru</option>
-            </select>
+          <h3 id="materiModalTitle">Tambah Materi</h3>
+          <form id="materiForm">
+            <input type="text" name="judul" placeholder="Judul" required>
+            <input type="text" name="deskripsi" placeholder="Deskripsi" required>
+            <input type="file" id="fileInput" accept="application/pdf"/>
             <button type="submit">Simpan</button>
           </form>
+          <div id="loadingMessage" style="display: none; color: blue; font-weight: bold; font-size: 16px;">
+            Materi sedang diunggah...
+          </div>          
         </div>
       </div>
       
       <script>
-          const modal = document.getElementById("userModal");
+          const modal = document.getElementById("materiModal");
           const btn = document.getElementById("openModalBtn");
           const span = document.querySelector(".close");
+
+          document.getElementById('fileInput').style.display = 'block';
+          document.getElementById('fileInput').required = true;
         
           btn.onclick = function() {
             modal.style.display = "block";
+            document.getElementById("materiModalTitle").innerText = "Tambah Materi";
+            editingMateriId = null;
+            currentFileUrl = null;
+            materiForm.reset();
+          
+            // ✅ Tampilkan kembali input file
+            const fileInput = document.getElementById('fileInput');
+            fileInput.style.display = 'block';     // tampilkan lagi
+            fileInput.required = true;             // wajibkan lagi
+            fileInput.value = '';                  // bersihkan jika sebelumnya ada sisa file
           }
         
           span.onclick = function() {
@@ -177,39 +353,18 @@
          <tr>
            <th>Judul</th>
            <th>Deskripsi</th>
-           <th>File Path</th>
+           <th>File path</th>
+           <th>Dibuat oleh</th>
            <th>Aksi</th>
          </tr>
        </thead>
-       <tbody id="userTableBody">
+       <tbody id="materiTableBody">
          <!-- Data user akan dimuat di sini -->
        </tbody>
      </table>
 
-
 <!-- custom js file link  -->
 <script src="js/script.js"></script>
 
-   
-</body>
-</html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- custom js file link  -->
-<script src="js/script.js"></script>
-
-   
 </body>
 </html>

@@ -4,7 +4,7 @@
    <meta charset="UTF-8">
    <meta http-equiv="X-UA-Compatible" content="IE=edge">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Data Jawaban</title>
+   <title>Data Tugas</title>
 
    <!-- font awesome cdn link  -->
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
@@ -52,38 +52,97 @@
       // tampilkan nama dari localStorage
       document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
 
-      async function loadAllUsers() {
-         const { data, error } = await supabase
-           .from('jawaban')
-           .select('*')
-   
-         if (error) {
-           return
-         }
-   
-         const tableBody = document.getElementById('userTableBody')
-         tableBody.innerHTML = ''
-   
-         data.forEach(user => {
-           const row = document.createElement('tr')
-           row.innerHTML = `
-           <td>${user.nama}</td> 
-           <td>${user.email}</td>
-           <td>${user.role}</td>              
-           <td>
-            <button onclick="editUser(${user.id})">Edit</button>
-            <button onclick="deleteUser(${user.id})">Hapus</button>
-          </td>
-           `
-           tableBody.appendChild(row)
-         })
-       }
-   
-       loadAllUsers()
+      let selectedNilaiId = null;
+  
+      async function loadAllJawaban() {
+        const { data, error } = await supabase
+          .from('jawaban')
+          .select('id_jawaban, user:created_by(nama), file_url, skor, created_at');
+      
+        if (error) {
+          console.error('Gagal mengambil data:', error);
+          return;
+        }
+  
+        const tableBody = document.getElementById('jawabanTableBody');
+        tableBody.innerHTML = '';
+  
+        data.forEach(jawaban => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${jawaban.user?.nama}</td>  
+            <td><a href="${jawaban.file_url}" target="_blank">Lihat File</a></td>
+            <td>${jawaban.skor}</td>
+            <td>${new Date(jawaban.created_at).toLocaleString('id-ID', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'})}
+            </td>
+            <td style="text-align: center;">
+              <button onclick="openNilaiModal('${jawaban.id_jawaban}')" style="padding: 6px 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">Nilai</button>
+            </td>           
+            
+          `;
+          tableBody.appendChild(row);
+        });
+      }
+  
+      let selectedSkor = null;
 
+
+      window.openNilaiModal = function(id_jawaban) {
+        selectedNilaiId = id_jawaban;
+      
+        const row = [...document.querySelectorAll('#jawabanTableBody tr')]
+          .find(r => r.querySelector(`button[onclick*="${id_jawaban}"]`));
+      
+        const skor = row ? row.children[2].innerText : '';
+        document.querySelector('#nilaiForm input[name="skor"]').value = skor;
+      
+        document.getElementById('nilaiModal').style.display = 'block';
+      }
+      
+      window.closeNilaiModal = function() {
+        document.getElementById('nilaiModal').style.display = 'none';
+        document.getElementById('nilaiForm').reset();
+        selectedNilaiId = null;
+      }
+  
+      document.addEventListener('DOMContentLoaded', () => {
+        loadAllJawaban();
+      
+        const nilaiForm = document.getElementById('nilaiForm');
+        nilaiForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const skorInput = nilaiForm.querySelector('input[name="skor"]');
+          const skor = parseInt(skorInput.value);
+      
+          if (isNaN(skor) || skor < 0) {
+            alert('Skor tidak valid.');
+            return;
+          }
+      
+          const { error } = await supabase
+            .from('jawaban')
+            .update({ skor })
+            .eq('id_jawaban', selectedNilaiId);
+      
+          if (error) {
+            alert('Gagal menyimpan nilai: ' + error.message);
+            return;
+          }
+      
+          alert('Nilai berhasil disimpan!');
+          closeNilaiModal();
+          loadAllJawaban();
+        });
+      });
+      
     </script>
-
 </head>
+
 <body>
 
    <header class="header">
@@ -118,45 +177,46 @@
       <div class="profile">
          <img src="images/pic-1.jpg" class="image" alt="">
          <h3 class="role">Eduweb</h3>
-   
          <h2 class="name">Daftar Menu</h2>
       </div>
    
       <nav class="navbar">
-         <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
-         <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
-         <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
-         <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
-         <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
-      </nav>
+        <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
+        <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
+        <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
+        <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
+        <a href="admin-courses3.html"><i class="fas fa-list"></i><span>Data Jawaban</span></a>
+        <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
+     </nav>
    
    </div>   
      <div>
-      <button id="openModalBtn">Tambah +</button>
-      <div id="userModal" class="modal">
+      
+      <div id="nilaiModal" class="modal">
         <div class="modal-content">
-          <span class="close">&times;</span>
-          <h3>Tambah User</h3>
-          <form id="userForm">
-            <input type="text" name="nama" placeholder="Nama Lengkap" required>
-            <input type="email" name="email" placeholder="Email" required>
-            <select name="role" required>
-              <option value="">Pilih Role</option>
-              <option value="Siswa">Siswa</option>
-              <option value="Guru">Guru</option>
-            </select>
-            <button type="submit">Simpan</button>
-          </form>
+           <span onclick="closeNilaiModal()" style="cursor:pointer;float:right;">&times;</span>
+           <h3>Tambahkan Nilai</h3>
+           <form id="nilaiForm">
+              <input type="number" name="skor" placeholder="Nilai" required>
+              <button type="submit">Simpan</button>
+           </form>
         </div>
-      </div>
+     </div>
       
       <script>
-          const modal = document.getElementById("userModal");
+          const modal = document.getElementById("nilaiModal");
           const btn = document.getElementById("openModalBtn");
           const span = document.querySelector(".close");
-        
+     
           btn.onclick = function() {
             modal.style.display = "block";
+            document.getElementById("nilaiModalTitle").innerText = "Tambah nilai";
+            editingNilaiId = null;
+            currentFileUrl = null;
+            tugasForm.reset();
+          
+            fileInput.required = true;             // wajibkan lagi
+            fileInput.value = '';                  // bersihkan jika sebelumnya ada sisa file
           }
         
           span.onclick = function() {
@@ -174,41 +234,20 @@
      <table>
        <thead>
          <tr>
-           <th>Judul</th>
-           <th>Deskripsi</th>
-           <th>File Path</th>
+           <th>Dibuat Oleh</th>
+           <th>File path</th>
+           <th>Skor</th>
+           <th>Dibuat pada</th>
            <th>Aksi</th>
          </tr>
        </thead>
-       <tbody id="userTableBody">
+       <tbody id="jawabanTableBody">
          <!-- Data user akan dimuat di sini -->
        </tbody>
      </table>
 
-
 <!-- custom js file link  -->
 <script src="js/script.js"></script>
 
-   
-</body>
-</html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- custom js file link  -->
-<script src="js/script.js"></script>
-
-   
 </body>
 </html>

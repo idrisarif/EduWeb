@@ -1397,13 +1397,17 @@ section{
    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
  }
 
- body.dark-mode table {
+ body.dark table {
    background-color: #1e1e1e;
    color: #f0f0f0;
  }
  
- body.dark-mode th, 
- body.dark-mode td {
+ body.dark th {
+   background-color: #444; /* atau #2c2c2c jika ingin sedikit lebih terang */
+   color: #e0e0e0;
+   border: 1px solid #000000;
+ } 
+ body.dark td {
    border: 1px solid #444;
  }
  
@@ -1471,20 +1475,50 @@ section{
  }
 
  
- th:nth-child(1), td:nth-child(1) {
-   width: 35%; /* Nama */
+ table.jawaban-table th:nth-child(1),
+ table.jawaban-table td:nth-child(1) {
+   width: 25%; /* Dibuat Oleh */
  }
-
- th:nth-child(2), td:nth-child(2) {
-   width: 35%; /* Email */
+ 
+ table.jawaban-table th:nth-child(2),
+ table.jawaban-table td:nth-child(2) {
+   width: 30%; /* File Path */
  }
-
- th:nth-child(3), td:nth-child(3) {
-   width: 10%; /* Role */
+ 
+ table.jawaban-table th:nth-child(3),
+ table.jawaban-table td:nth-child(3) {
+   width: 10%; /* Skor */
  }
-
- th:nth-child(4), td:nth-child(4) {
-   width: 20%; /* Aksi */
+ 
+ table.jawaban-table th:nth-child(4),
+ table.jawaban-table td:nth-child(4) {
+   width: 20%; /* Dibuat Pada */
+ }
+ 
+ table.jawaban-table th:nth-child(5),
+ table.jawaban-table td:nth-child(5) {
+   width: 15%; /* Aksi */
+ }
+ 
+ /* Tabel Materi (contoh layout berbeda) */
+ table.materi-table th:nth-child(1),
+ table.materi-table td:nth-child(1) {
+   width: 40%; /* Judul Materi */
+ }
+ 
+ table.materi-table th:nth-child(2),
+ table.materi-table td:nth-child(2) {
+   width: 30%; /* Deskripsi */
+ }
+ 
+ table.materi-table th:nth-child(3),
+ table.materi-table td:nth-child(3) {
+   width: 20%; /* Tanggal */
+ }
+ 
+ table.materi-table th:nth-child(4),
+ table.materi-table td:nth-child(4) {
+   width: 10%; /* Aksi */
  }
  
  button,
@@ -1492,6 +1526,10 @@ section{
    background-color: #949494;
    color: white;
    padding: 10px 10px;
+   margin-top: 1px;
+   margin-right: 3px;
+   margin-right: 3px;
+   margin-bottom: 1px;
    font-size: 14px;
    border: none;
    border-radius: 2px;

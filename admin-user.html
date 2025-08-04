@@ -76,79 +76,80 @@
        let editingUserId = null
 
        // Fungsi hapus user
-window.deleteUser = async function(id) {
-  const { error } = await supabase
-    .from('user')
-    .delete()
-    .eq('user_id', id)
+        window.deleteUser = async function(id) {
+        const { error } = await supabase
+       .from('user')
+       .delete()
+       .eq('user_id', id)
 
-  if (error) {
-    alert('Gagal menghapus user: ' + error.message)
-    return
-  }
+        if (error) {
+        alert('Gagal menghapus user: ' + error.message)
+        return
+        }
 
-  alert('User berhasil dihapus!')
-  await loadAllUsers()
-}
+        alert('User berhasil dihapus!')
+        await loadAllUsers()
+        }
 
-window.editUser = async function(id) {
-  const { data, error } = await supabase
-    .from('user')
-    .select('*')
-    .eq('user_id', id)
-    .single()
+        window.editUser = async function(id) {
+        const { data, error } = await supabase
+        .from('user')
+        .select('*')
+        .eq('user_id', id)
+        .single()
 
-  if (error) {
-    alert('Gagal mengambil data user: ' + error.message)
-    return
-  }
+        if (error) {
+        alert('Gagal mengambil data user: ' + error.message)
+        return
+        }
 
-  document.querySelector('#userForm [name="nama"]').value = data.nama
-  document.querySelector('#userForm [name="email"]').value = data.email
-  document.querySelector('#userForm [name="role"]').value = data.role
+      document.querySelector('#userForm [name="nama"]').value = data.nama
+      document.querySelector('#userForm [name="email"]').value = data.email
+      document.querySelector('#userForm [name="role"]').value = data.role
 
-  document.getElementById("userModalTitle").innerText = "Edit User"
-  editingUserId = id
-  modal.style.display = "block"
-}
+      document.getElementById("userModalTitle").innerText = "Edit User"
+      editingUserId = id
+      modal.style.display = "block"
+      }
 
-const userForm = document.getElementById('userForm')
-userForm.addEventListener('submit', async function(e) {
-  e.preventDefault()
-  const formData = new FormData(userForm)
-  const userData = Object.fromEntries(formData.entries())
+        const userForm = document.getElementById('userForm')
+        
+        userForm.addEventListener('submit', async function(e) {
+        e.preventDefault()
+        
+        const formData = new FormData(userForm)
+        const userData = Object.fromEntries(formData.entries())
 
-  let error
+        let error
 
-  if (editingUserId) {
-    // Mode edit
-    const res = await supabase
-      .from('user')
-      .update(userData)
-      .eq('user_id', editingUserId)
+        if (editingUserId) {
+        // Mode edit
+        const res = await supabase
+        .from('user')
+        .update(userData)
+        .eq('user_id', editingUserId)
 
-    error = res.error
-    editingUserId = null  // Reset setelah selesai edit
-  } else {
-    // Mode tambah
-    const res = await supabase
-      .from('user')
-      .insert([userData])
+        error = res.error
+        editingUserId = null  // Reset setelah selesai edit
+        } else {
+        // Mode tambah
+        const res = await supabase
+        .from('user')
+        .insert([userData])
 
-    error = res.error
-  }
+        error = res.error
+        }
 
-  if (error) {
-    alert('Gagal menyimpan user: ' + error.message)
-    return
-  }
+        if (error) {
+        alert('Gagal menyimpan user: ' + error.message)
+        return
+        }
 
-  alert('User berhasil disimpan!')
-  modal.style.display = "none"
-  await loadAllUsers()
-  userForm.reset()
-})
-
+        alert('User berhasil disimpan!')
+        modal.style.display = "none"
+        await loadAllUsers()
+        userForm.reset()
+        })
 
     </script>
 
@@ -192,12 +193,13 @@ userForm.addEventListener('submit', async function(e) {
       </div>
    
       <nav class="navbar">
-         <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
-         <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
-         <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
-         <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
-         <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
-      </nav>
+        <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
+        <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
+        <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
+        <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
+        <a href="admin-courses3.html"><i class="fas fa-list"></i><span>Data Jawaban</span></a>
+        <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
+     </nav>
    
    </div>   
      <div>
