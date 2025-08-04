@@ -11,5 +11,5 @@ jobs:
       - name: Ping Supabase API
         run: |
           curl --request GET \
-          --url "${{ secrets.SUPABASE_URL }}/rest/v1/your_table_name?select=id&limit=1" \
+          --url "${{ secrets.SUPABASE_URL }}/rest/v1/user?select=user_id&limit=1" \
           --header "apikey: ${{ secrets.SUPABASE_ANON_KEY }}"
