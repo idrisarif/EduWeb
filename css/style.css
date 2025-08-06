@@ -529,76 +529,85 @@ section{
 
 .courses .box-container{
    display: grid;
-   grid-template-columns: repeat(auto-fit, minmax(30rem, 1fr));
-   gap:1.5rem;
-   justify-content: center;
-   align-items: flex-start;
+   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+   gap: 20px;
+   padding: 2.5rem;
 }
-
 .courses .box-container .box{
-   border-radius: .5rem;
+   /* --- PERUBAHAN DI SINI --- */
+   display: flex; /* Mengaktifkan Flexbox */
+   flex-direction: column; /* Mengatur arah item menjadi kolom */
+   /* ------------------------- */
+   border: 1px solid #ddd;
+   padding: 15px;
+   border-radius: 5px;
    background-color: var(--white);
-   padding: 2rem;
 }
-
-.courses .box-container .box .tutor{
-   display: flex;
-   align-items: center;
-   gap: 1.5rem;
-   margin-bottom: 2.5rem;
-}
-
-.courses .box-container .box .tutor img{
-   height: 5rem;
-   width: 5rem;
-   border-radius: 50%;
-   object-fit: cover;
-}
-
-.courses .box-container .box .tutor h3{
-   font-size: 1.8rem;
-   color: var(--black);
-   margin-bottom: .2rem;
-}
-
-.courses .box-container .box .tutor span{
-   font-size: 1.3rem;
-   color:var(--light-color);
-}
-
 .courses .box-container .box .thumb{
    position: relative;
+   width: 100%;
+   height: 200px;
+   overflow: hidden;
+   border-radius: 5px;
+   margin-bottom: 10px;
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   background-color: var(--light-bg);
 }
-
-.courses .box-container .box .thumb span{
-   position: absolute;
-   top:1rem; left: 1rem;
-   border-radius: .5rem;
-   padding: .5rem 1.5rem;
-   background-color: rgba(0,0,0,.3);
-   color: #fff;
-   font-size: 1.5rem;
-}
-
 .courses .box-container .box .thumb img{
    width: 100%;
-   height: 20rem;
+   height: 100%;
    object-fit: cover;
-   border-radius: .5rem;
 }
-
+.courses .box-container .box .thumb i{
+   font-size: 4em;
+   color: var(--light-color);
+}
+.courses .box-container .box .predikat{
+   font-size: 1.6rem;
+   color: var(--light-color);
+   margin-bottom: 5px;
+}
 .courses .box-container .box .title{
    font-size: 2rem;
    color: var(--black);
-   padding-bottom: .5rem;
-   padding-top: 1rem;
+   margin-bottom: 5px;
 }
-
-.courses .more-btn{
+.courses .box-container .box .tutor-name{
+   font-size: 1.5rem;
+   color: var(--light-color);
+   margin-bottom: 10px;
+}
+.courses .box-container .box .description{
+   font-size: 1.6rem;
+   color: var(--light-color);
+   line-height: 1.5;
+   margin-bottom: 10px;
+   /* min-height dipertahankan agar deskripsi terlihat konsisten */
+}
+.courses .box-container .box .inline-btn{
+   /* --- PERUBAHAN DI SINI --- */
+   display: block;
+   padding: 1rem;
+   border-radius: .5rem;
+   background-color: var(--main-color);
+   color: var(--white);
    text-align: center;
-   margin-top: 2rem;
+   font-size: 1.8rem;
+   margin-top: auto; /* Ini yang mendorong tombol ke bawah */
+   /* ------------------------- */
 }
-
+.courses .box-container .box .inline-btn:hover{
+   background-color: var(--black);
+}
+.courses .box-container p.empty{
+   grid-column: 1/-1;
+   text-align: center;
+   padding: 20px;
+   font-size: 2rem;
+   color: var(--light-color);
+}
 .playlist-details .row{
    display: flex;
    align-items: flex-end;
@@ -1623,3 +1632,29 @@ section{
    border: none;
    margin-top: 16px;
  }
+
+.form-group {
+   margin-bottom: 15px;
+}
+
+.form-group label {
+   font-size: 1.5em; /* Anda bisa sesuaikan ukurannya */
+   font-weight: bold;
+   display: block; /* Agar label berada di atas input */
+   margin-top: 10px;
+ }
+
+ /* --- STYLES BARU UNTUK PDF VIEWER --- */
+.pdf-viewer-container {
+   width: 100%;
+   height: 400px; /* Diubah agar lebih panjang */
+   overflow: hidden;
+   margin-top: 15px;
+   margin-bottom: 15px;
+}
+
+.pdf-viewer-container iframe {
+   width: 100%;
+   height: 100%;
+   border: none;
+}
