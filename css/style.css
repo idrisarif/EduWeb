@@ -1645,14 +1645,11 @@ section{
  }
 
  /* --- STYLES BARU UNTUK PDF VIEWER --- */
-.pdf-viewer-container {
+ .pdf-viewer-container {
    width: 100%;
-   height: 400px; /* Diubah agar lebih panjang */
-   overflow: hidden;
-   margin-top: 15px;
-   margin-bottom: 15px;
+   height: 80vh; /* Menggunakan 80% dari tinggi viewport untuk tampilan yang lebih besar */
+   margin-bottom: 2rem;
 }
-
 .pdf-viewer-container iframe {
    width: 100%;
    height: 100%;
