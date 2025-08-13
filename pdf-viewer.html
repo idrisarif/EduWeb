@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Penampil Materi PDF</title>
+    <title>Penampil Materi</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
+   
 
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
@@ -58,18 +59,19 @@
             description.classList.add('description');
             description.textContent = materi.deskripsi;
             
-            const pdfViewerContainer = document.createElement('div');
-            pdfViewerContainer.classList.add('pdf-viewer-container');
+            const fileContainer = document.createElement('div');
+            fileContainer.classList.add('pdf-viewer-container');
             
             const iframe = document.createElement('iframe');
             iframe.src = materi.file_url;
             iframe.title = materi.judul;
-            pdfViewerContainer.appendChild(iframe);
+            
+            fileContainer.appendChild(iframe);
 
             box.appendChild(title);
             box.appendChild(tutorName);
             box.appendChild(description);
-            box.appendChild(pdfViewerContainer);
+            box.appendChild(fileContainer);
 
             container.appendChild(box);
         }
@@ -94,10 +96,42 @@
                     }
                 });
             }
-        });
+       });
 
-        // ... (Kode untuk logout dan nama pengguna tidak diubah)
+        const logoutBtn = document.getElementById('logoutBtn');
+             if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                const { error } = await supabase.auth.signOut();
+                    if (error) {
+                        alert('Gagal logout: ' + error.message);
+                        return;
+                }
+                localStorage.clear();
+                window.location.href = 'login.html';
+            });
+        }
 
+        const userNameElement = document.getElementById('userName');
+        if (userNameElement) {
+            const storedName = localStorage.getItem('nama');
+            if (storedName) {
+                userNameElement.innerText = storedName;
+            } else {
+                supabase.auth.getUser().then(async ({ data: { user } }) => {
+                    if (user) {
+                        const { data, error } = await supabase
+                            .from('user')
+                            .select('nama')
+                            .eq('user_id', user.id)
+                            .single();
+                        if (data) {
+                            userNameElement.innerText = data.nama;
+                            localStorage.setItem('nama', data.nama);
+                        }
+                    }
+                });
+            }
+        }
     </script>
 </head>
 <body>
@@ -136,13 +170,12 @@
     </div>
 
     <section class="courses">
-        <h1 class="heading">Materi Terpilih</h1>
+        <h1 class="heading">Lihat Materi</h1>
         <div class="box-container">
             </div>
     </section>
 
     <script src="js/script.js"></script>
-    <script src="js/script.js"></script>
-    
+        
 </body>
 </html>

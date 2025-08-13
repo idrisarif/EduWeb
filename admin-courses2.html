@@ -1,369 +1,387 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Data Tugas</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Tugas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
 
-   <!-- font awesome cdn link  -->
-   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js';
+    
+        const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg';
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
-   <!-- custom css file link  -->
-   <link rel="stylesheet" href="css/style.css">
-
-   <script type="module">
-      import { createClient } from 'https://esm.sh/@supabase/supabase-js'
-  
-      const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
-      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
-      const supabase = createClient(supabaseUrl, supabaseKey)
-  
-      // Saat halaman dimuat
-      window.addEventListener('DOMContentLoaded', async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-  
-        if (session) {
-         // ✅ Session ada, boleh akses halaman
-         console.log('Login OK:', session.user.email)
-       } else {
-         // 🕓 Cek ulang jika session belum tersedia
-         supabase.auth.onAuthStateChange((event, session) => {
-           if (!session) {
-             window.location.href = 'login.html'
-           }
-          })
+        let currentUserId = null; // Tambahan untuk menyimpan ID pengguna yang sedang login
+        
+        // Helper function untuk memformat tanggal dan waktu
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = String(date.getFullYear()).slice(-2);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
         }
-      })
-
-      const logoutBtn = document.getElementById('logoutBtn')
-      
-      logoutBtn.addEventListener('click', async () => {
-         const { error } = await supabase.auth.signOut()
-         if (error) {
-            alert('Gagal logout: ' + error.message)
-            return
-         }
-         // Hapus data dari localStorage (jika ada)
-         localStorage.clear()
-         // Arahkan ke halaman login
-         window.location.href = 'login.html'
-      })
-      // tampilkan nama dari localStorage
-      document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
-
-      // Fungsi memuat semua data tugas
-      async function loadAllTugas() {
-        const { data, error } = await supabase
-          .from('tugas')
-          .select(`
-            id_tugas,
-            judul,
-            deskripsi,
-            file_url,
-            created_by,
-            user:created_by (nama)
-          `);
-      
-        if (error) {
-          console.error('Gagal mengambil data:', error);
-          return;
-        }
-      
-        const tableBody = document.getElementById('tugasTableBody');
-        tableBody.innerHTML = '';
-      
-        data.forEach(tugas => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${tugas.judul}</td>
-            <td>${tugas.deskripsi}</td>
-            <td><a href="${tugas.file_url}" target="_blank">Lihat File</a></td>
-            <td>${tugas.user?.nama || 'Tidak diketahui'}</td>
-              <button onclick="editTugas('${tugas.id_tugas}')">Edit</button>
-              <button onclick="deleteTugas('${tugas.id_tugas}')">Hapus</button>
-            </td>
-          `;
-          tableBody.appendChild(row);
+    
+        // Saat halaman dimuat
+        window.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+    
+            if (session) {
+                console.log('Login OK:', session.user.email);
+                currentUserId = session.user.id;
+                loadAllTugas();
+            } else {
+                supabase.auth.onAuthStateChange((event, session) => {
+                    if (!session) {
+                        window.location.href = 'login.html';
+                    } else {
+                        currentUserId = session.user.id;
+                        loadAllTugas();
+                    }
+                });
+            }
         });
-      }
-      
-      loadAllTugas();
-      
-      let editingTugasId = null;
-      let currentFileUrl = null; // menyimpan file_url lama saat edit
-      
-      window.deleteTugas = async function(id) {
-        // Ambil data tugas dulu (untuk dapatkan file_url)
-        const { data: tugas, error: fetchError } = await supabase
-          .from('tugas')
-          .select('file_url')
-          .eq('id_tugas', id)
-          .single();
-      
-        if (fetchError) {
-          alert('Gagal mengambil data tugas: ' + fetchError.message);
-          return;
-        }
-      
-        // Ekstrak path relatif file (tanpa /storage/v1/object/public/tugas/)
-        const fileUrl = tugas.file_url;
-        const basePublicUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co/storage/v1/object/public/tugas/';
+    
+        const logoutBtn = document.getElementById('logoutBtn');
+        logoutBtn.addEventListener('click', async () => {
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                alert('Gagal logout: ' + error.message);
+                return;
+            }
+            localStorage.clear();
+            window.location.href = 'login.html';
+        });
         
-        let relativePath = fileUrl.replace(basePublicUrl, '').replace(/^\/+/, '').replace(/\/{2,}/g, '/');
-      
-        // Hapus file dari storage
-        const { error: deleteFileError } = await supabase.storage
-          .from('tugas')
-          .remove([relativePath]);
-      
-        if (deleteFileError) {
-          alert('Gagal menghapus file dari storage: ' + deleteFileError.message);
-          console.error('Storage remove error:', deleteFileError);
-          return;
-        }
-      
-        // Hapus data dari tabel
-        const { error: deleteTugasError } = await supabase
-          .from('tugas')
-          .delete()
-          .eq('id_tugas', id);
-      
-        if (deleteTugasError) {
-          alert('Gagal menghapus data tugas: ' + deleteTugasError.message);
-          return;
-        }
-      
-        alert('Tugas berhasil dihapus!');
-        await loadAllTugas();
-      };      
-      
-      window.editTugas = async function(id) {
-        const { data, error } = await supabase
-          .from('tugas')
-          .select('*')
-          .eq('id_tugas', id)
-          .single();
-      
-        if (error) {
-          alert('Gagal mengambil data tugas: ' + error.message);
-          return;
-        }
-      
-        document.querySelector('#tugasForm [name="judul"]').value = data.judul;
-        document.querySelector('#tugasForm [name="deskripsi"]').value = data.deskripsi;
-      
-        currentFileUrl = data.file_url;
-        editingTugasId = id;
-        document.getElementById("tugasModalTitle").innerText = "Edit Tugas";
-        modal.style.display = "block";
-      
-        // Sembunyikan input file dan hilangkan required saat edit
-        document.getElementById('fileInput').style.display = 'none';
-        document.getElementById('fileInput').required = false;
+        document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna';
+    
+        // Fungsi memuat semua data tugas
+        async function loadAllTugas() {
+            const { data, error } = await supabase
+                .from('tugas')
+                .select(`
+                    id_tugas,
+                    judul,
+                    deskripsi,
+                    file_url,
+                    created_at,
+                    created_by,
+                    user:created_by (nama)
+                `)
+                .order('created_at', { ascending: false });
+        
+            if (error) {
+                console.error('Gagal mengambil data:', error);
+                return;
+            }
+        
+            const tableBody = document.getElementById('tugasTableBody');
+            tableBody.innerHTML = '';
+        
+            data.forEach(tugas => {
+                const row = document.createElement('tr');
+                let actionButtons = '';
+                
+                // Tampilkan tombol edit dan hapus hanya jika user adalah pembuat tugas
+                if (currentUserId && tugas.created_by === currentUserId) {
+                    actionButtons = `
+                        <button onclick="editTugas('${tugas.id_tugas}')">Edit</button>
+                        <button onclick="deleteTugas('${tugas.id_tugas}')">Hapus</button>
+                    `;
+                }
 
-        const fileInput = document.getElementById('fileInput');
-        fileInput.style.display = 'none';      // sembunyikan input file
-        fileInput.required = false;            // tidak wajib
-      }
-      
-      const tugasForm = document.getElementById('tugasForm');
-      tugasForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-      
-        // Tampilkan pesan loading
-        const loadingDiv = document.getElementById('loadingMessage');
-        loadingDiv.style.display = 'block';
-      
-        const formData = new FormData(tugasForm);
-        const tugasData = Object.fromEntries(formData.entries());
-      
-        let fileUrl = currentFileUrl;
-        const file = document.getElementById('fileInput').files[0];
-      
-        if (file) {
-          const rawName = file.name.replaceAll(/[^\w.\-]/g, '_'); // hilangkan karakter aneh
-          const fileName = `${Date.now()}_${rawName}`; // tanpa slash di depan
-          const { data: uploadData, error: uploadError } = await supabase
-            .storage
-            .from('tugas')
-            .upload(fileName, file, { upsert: true });
-        
-      
-          if (uploadError) {
-            alert('Gagal upload file: ' + uploadError.message);
-            loadingDiv.style.display = 'none'; // Sembunyikan pesan loading
-            return;
-          }
-      
-          const { data: publicData } = supabase.storage
-            .from('tugas')
-            .getPublicUrl(fileName);
-      
-          fileUrl = publicData.publicUrl;
+                row.innerHTML = `
+                    <td>${tugas.judul}</td>
+                    <td>${tugas.deskripsi}</td>
+                    <td><a href="${tugas.file_url}" target="_blank">Lihat File</a></td>
+                    <td>${tugas.user?.nama || 'Tidak diketahui'}</td>
+                    <td>${formatDate(tugas.created_at)}</td>
+                    <td>
+                      <button onclick="editTugas('${tugas.id_tugas}')">Edit</button>
+                      <button onclick="deleteTugas('${tugas.id_tugas}')">Hapus</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
         }
-      
-        let error;
-        if (editingTugasId) {
-          const res = await supabase
+        
+        loadAllTugas();
+        
+        let editingTugasId = null;
+        let currentFileUrl = null;
+        
+        window.deleteTugas = async function(id) {
+            // Cek otorisasi sebelum menghapus
+            const { data: tugas, error: fetchError } = await supabase
+                .from('tugas')
+                .select('created_by, file_url')
+                .eq('id_tugas', id)
+                .single();
+
+            if (fetchError || (currentUserId && tugas.created_by !== currentUserId)) {
+                alert('Anda tidak bisa menghapus tugas guru lain!');
+                return;
+            }
+
+            if (!confirm("Apakah Anda yakin ingin menghapus tugas ini?")) {
+                return;
+            }
+        
+            const fileUrl = tugas.file_url;
+            const basePublicUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co/storage/v1/object/public/tugas/';
+            let relativePath = fileUrl.replace(basePublicUrl, '').replace(/^\/+/, '').replace(/\/{2,}/g, '/');
+        
+            const { error: deleteFileError } = await supabase.storage
+                .from('tugas')
+                .remove([relativePath]);
+        
+            if (deleteFileError) {
+                alert('Gagal menghapus file dari storage: ' + deleteFileError.message);
+                console.error('Storage remove error:', deleteFileError);
+                return;
+            }
+        
+            const { error: deleteTugasError } = await supabase
+                .from('tugas')
+                .delete()
+                .eq('id_tugas', id);
+        
+            if (deleteTugasError) {
+                alert('Gagal menghapus data tugas: ' + deleteTugasError.message);
+                return;
+            }
+        
+            alert('Tugas berhasil dihapus!');
+            await loadAllTugas();
+        };
+        window.editTugas = async function(id) {
+            const { data, error } = await supabase
+                .from('tugas')
+                .select('*')
+                .eq('id_tugas', id)
+                .single();
+
+            // Cek otorisasi
+            if (error || (currentUserId && data.created_by !== currentUserId)) {
+                alert('Anda tidak bisa mengedit tugas guru lain!');
+                return;
+            }
+        
+            document.querySelector('#tugasForm [name="judul"]').value = data.judul;
+            document.querySelector('#tugasForm [name="deskripsi"]').value = data.deskripsi;
+            
+            // Set input judul dan deskripsi agar tidak required
+            document.querySelector('#tugasForm [name="judul"]').required = false;
+            document.querySelector('#tugasForm [name="deskripsi"]').required = false;
+
+            currentFileUrl = data.file_url;
+            editingTugasId = id;
+            document.getElementById("tugasModalTitle").innerText = "Edit Tugas";
+            modal.style.display = "block";
+        
+            const fileInput = document.getElementById('fileInput');
+            fileInput.style.display = 'block';
+            fileInput.required = false; // Ini kuncinya: file tidak wajib
+            fileInput.value = '';
+        }
+        
+        const tugasForm = document.getElementById('tugasForm');
+        tugasForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+        
+            const loadingDiv = document.getElementById('loadingMessage');
+            loadingDiv.style.display = 'block';
+        
+            const formData = new FormData(tugasForm);
+            const tugasData = Object.fromEntries(formData.entries());
+        
+            let fileUrl = currentFileUrl;
+            const file = document.getElementById('fileInput').files[0];
+        
+            if (file) {
+                const rawName = file.name.replaceAll(/[^\w.\-]/g, '_');
+                const fileName = `${Date.now()}_${rawName}`;
+                const { error: uploadError } = await supabase
+                    .storage
+                    .from('tugas')
+                    .upload(fileName, file, { upsert: true });
+        
+                if (uploadError) {
+                    alert('Gagal upload file: ' + uploadError.message);
+                    loadingDiv.style.display = 'none';
+                    return;
+                }
+        
+                const { data: publicData } = supabase.storage
+                    .from('tugas')
+                    .getPublicUrl(fileName);
+        
+                fileUrl = publicData.publicUrl;
+            }
+        
+            let result; // Menggunakan variabel 'result' baru untuk menampung respons
+
+    if (editingTugasId) {
+        // Logika untuk mode EDIT
+        const updateObject = {};
+        if (tugasData.judul) updateObject.judul = tugasData.judul;
+        if (tugasData.deskripsi) updateObject.deskripsi = tugasData.deskripsi;
+        if (fileUrl) updateObject.file_url = fileUrl;
+
+        result = await supabase
             .from('tugas')
-            .update({
-              ...tugasData,
-              file_url: fileUrl
-            })
+            .update(updateObject)
             .eq('id_tugas', editingTugasId);
-      
-          error = res.error;
-          if (!error) {
+
+        if (!result.error) {
             editingTugasId = null;
             currentFileUrl = null;
-          }
-        } else {
-          const res = await supabase
+        }
+
+    } else {
+        // Logika untuk mode TAMBAH BARU
+        const { data: { session } } = await supabase.auth.getSession();
+        const createdBy = session?.user?.id;
+
+        result = await supabase
             .from('tugas')
             .insert([
-              {
-                ...tugasData,
-                file_url: fileUrl
-              }
+                {
+                    judul: tugasData.judul,
+                    deskripsi: tugasData.deskripsi,
+                    file_url: fileUrl,
+                    created_by: createdBy
+                }
             ]);
-      
-          error = res.error;
-        }
-      
-        // Sembunyikan pesan loading setelah selesai
-        loadingDiv.style.display = 'none';
-      
-        if (error) {
-          alert('Gagal menyimpan tugas: ' + error.message);
-          return;
-        }
-      
-        alert('Tugas berhasil disimpan!');
-        modal.style.display = "none";
-        await loadAllTugas();
-        tugasForm.reset();
-        document.getElementById('fileInput').value = '';
-      });      
-    </script>
+    }
 
+    loadingDiv.style.display = 'none';
+
+    if (result.error) { // Memeriksa error dari variabel 'result'
+        alert('Gagal menyimpan tugas: ' + result.error.message);
+        return;
+    }
+
+    alert('Tugas berhasil disimpan!');
+    modal.style.display = "none";
+    await loadAllTugas();
+    tugasForm.reset();
+    document.getElementById('fileInput').value = '';
+});
+    </script>
 </head>
 <body>
 
-   <header class="header">
-   
-      <section class="flex">
-   
-         <a href="admin.html" class="logo">EduWeb</a>
-   
-         <div class="icons">
-            <div id="menu-btn" class="fas fa-bars"></div>
-            <div id="user-btn" class="fas fa-user"></div>
-            <div id="toggle-btn" class="fas fa-sun"></div>
-         </div>
-   
-         <div class="profile">
-            <p class="role">Halo<p>
-            <h3 class="name" id="userName"></h3>
-            <p><span id="role"></span>
-               <a id="logoutBtn" class="delete-btn">Keluar</a>
-         </div>
-   
-      </section>
-   
-   </header>
-   
-   <div class="side-bar">
-   
-      <div id="close-btn">
-         <i class="fas fa-times"></i>
-      </div>
-   
-      <div class="profile">
-         <img src="images/pic-1.jpg" class="image" alt="">
-         <h3 class="role">Eduweb</h3>
-   
-         <h2 class="name">Daftar Menu</h2>
-      </div>
-   
-      <nav class="navbar">
-        <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
-        <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
-        <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
-        <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
-        <a href="admin-courses3.html"><i class="fas fa-list"></i><span>Data Jawaban</span></a>
-        <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
-     </nav>
-   
-   </div>   
-     <div>
-      <button id="openModalBtn">Tambah +</button>
-      <div id="tugasModal" class="modal">
-        <div class="modal-content">
-          <span class="close">&times;</span>
-          <h3 id="tugasModalTitle">Tambah Tugas</h3>
-          <form id="tugasForm">
-            <input type="text" name="judul" placeholder="Judul" required>
-            <input type="text" name="deskripsi" placeholder="Deskripsi" required>
-            <input type="file" id="fileInput" accept="application/pdf"/>
-            <button type="submit">Simpan</button>
-          </form>
-          <div id="loadingMessage" style="display: none; color: blue; font-weight: bold; font-size: 16px;">
-            Tugas sedang diunggah...
-          </div>          
+    <header class="header">
+        <section class="flex">
+            <a href="admin.html" class="logo">EduWeb</a>
+            <div class="icons">
+                <div id="menu-btn" class="fas fa-bars"></div>
+                <div id="user-btn" class="fas fa-user"></div>
+                <div id="toggle-btn" class="fas fa-sun"></div>
+            </div>
+            <div class="profile">
+                <p class="role">Halo<p>
+                <h3 class="name" id="userName"></h3>
+                <p><span id="role"></span>
+                <a id="logoutBtn" class="delete-btn">Keluar</a>
+            </div>
+        </section>
+    </header>
+    
+    <div class="side-bar">
+        <div id="close-btn">
+            <i class="fas fa-times"></i>
         </div>
-      </div>
-      
-      <script>
-          const modal = document.getElementById("tugasModal");
-          const btn = document.getElementById("openModalBtn");
-          const span = document.querySelector(".close");
+        <div class="profile">
+            <img src="images/pic-1.jpg" class="image" alt="">
+            <h3 class="role">Eduweb</h3>
+            <h2 class="name">Daftar Menu</h2>
+        </div>
+        <nav class="navbar">
+          <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
+          <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
+          <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
+          <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
+          <a href="admin-courses3.html"><i class="fas fa-list"></i><span>Data Jawaban</span></a>
+          <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
+        </nav>
+    </div>
 
-          document.getElementById('fileInput').style.display = 'block';
-          document.getElementById('fileInput').required = true;
-        
-          btn.onclick = function() {
-            modal.style.display = "block";
-            document.getElementById("tugasModalTitle").innerText = "Tambah Tugas";
-            editingTugasId = null;
-            currentFileUrl = null;
-            tugasForm.reset();
-          
-            // ✅ Tampilkan kembali input file
-            const fileInput = document.getElementById('fileInput');
-            fileInput.style.display = 'block';     // tampilkan lagi
-            fileInput.required = true;             // wajibkan lagi
-            fileInput.value = '';                  // bersihkan jika sebelumnya ada sisa file
-          }
-        
-          span.onclick = function() {
-            modal.style.display = "none";
-          }
+    <button id="openModalBtn">Tambah +</button>
+        <div id="tugasModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h3 id="tugasModalTitle">Tambah Tugas</h3>
+                <form id="tugasForm">
+                    <input type="text" name="judul" placeholder="Judul" required>
+                    <input type="text" name="deskripsi" placeholder="Deskripsi" required>
+                    <input type="file" id="fileInput" accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"/>
+                    <button type="submit">Simpan</button>
+                </form>
+                <div id="loadingMessage" style="display: none; color: blue; font-weight: bold; font-size: 16px;">
+                    Tugas sedang diunggah...
+                </div>
+            </div>
+        </div>
 
-          window.onclick = function(event) {
-            if (event.target === modal) {
-              modal.style.display = "none";
+        <script>
+            const modal = document.getElementById("tugasModal");
+            const btn = document.getElementById("openModalBtn");
+            const span = document.querySelector(".close");
+            
+            btn.onclick = function() {
+                document.getElementById("tugasModalTitle").innerText = "Tambah Tugas";
+                editingTugasId = null;
+                currentFileUrl = null;
+                tugasForm.reset();
+            
+                const judulInput = document.querySelector('#tugasForm [name="judul"]');
+                const deskripsiInput = document.querySelector('#tugasForm [name="deskripsi"]');
+                judulInput.required = true;
+                deskripsiInput.required = true;
+
+                const fileInput = document.getElementById('fileInput');
+                fileInput.style.display = 'block';
+                fileInput.required = true;
+                fileInput.value = '';
+                modal.style.display = "block";
             }
-          }
-        </script>
-     </div>
-   
-     <table>
-       <thead>
-         <tr>
-           <th>Judul</th>
-           <th>Deskripsi</th>
-           <th>File path</th>
-           <th>Dibuat oleh</th>
-           <th>Aksi</th>
-         </tr>
-       </thead>
-       <tbody id="tugasTableBody">
-         <!-- Data user akan dimuat di sini -->
-       </tbody>
-     </table>
+            
+            span.onclick = function() {
+                modal.style.display = "none";
+            }
 
-<!-- custom js file link  -->
+            window.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.style.display = "none";
+                }
+            }
+        </script>
+        
+        <table class="tugas-table">
+            <thead>
+                <tr>
+                    <th>Judul</th>
+                    <th>Deskripsi</th>
+                    <th>File path</th>
+                    <th>Dibuat oleh</th>
+                    <th>Dibuat pada</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="tugasTableBody">
+                </tbody>
+        </table>
+    </section>
+
 <script src="js/script.js"></script>
 
 </body>
