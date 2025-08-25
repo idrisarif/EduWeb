@@ -17,25 +17,20 @@
 
         let editingVideoId = null;
         let currentFileUrl = null;
+        let currentThumbnailUrl = null;
 
         window.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabase.auth.getSession()
-
             if (session) {
                 console.log('Login OK:', session.user.email)
                 document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
                 loadAllVideo()
             } else {
-                supabase.auth.onAuthStateChange((event, session) => {
-                    if (!session) {
-                        window.location.href = 'login.html'
-                    }
-                })
+                window.location.href = 'login.html'
             }
         })
 
         const logoutBtn = document.getElementById('logoutBtn')
-
         logoutBtn.addEventListener('click', async () => {
             const { error } = await supabase.auth.signOut()
             if (error) {
@@ -46,7 +41,6 @@
             window.location.href = 'login.html'
         })
 
-        // Fungsi memuat semua data video
         async function loadAllVideo() {
             const { data, error } = await supabase
                 .from('video')
@@ -55,6 +49,7 @@
                     judul,
                     deskripsi,
                     file_url,
+                    thumbnail_url,
                     sumber,
                     created_at,
                     created_by,
@@ -73,11 +68,13 @@
                 const row = document.createElement('tr');
                 const isYouTube = video.sumber && video.sumber.includes('YouTube');
                 const fileLinkText = isYouTube ? 'Tonton di YouTube' : 'Lihat File';
-                const fileLink = isYouTube ? video.file_url : video.file_url;
+                const fileLink = isYouTube ? `https://www.youtube.com/watch?v=${video.file_url}` : video.file_url;
+                const thumbnailUrl = video.thumbnail_url || 'https://via.placeholder.com/50';
 
                 row.innerHTML = `
                     <td>${video.judul}</td>
                     <td>${video.deskripsi}</td>
+                    <td><img src="${thumbnailUrl}" alt="Thumbnail" style="width: 50px; height: auto;"></td>
                     <td><a href="${fileLink}" target="_blank">${fileLinkText}</a></td>
                     <td>${video.user?.nama || 'Tidak diketahui'}</td>
                     <td>
@@ -87,7 +84,7 @@
                 `;
                 tableBody.appendChild(row);
             });
-        }   
+        }   
 
         loadAllVideo();
 
@@ -104,7 +101,7 @@
             
             const { data: video, error: fetchError } = await supabase
                 .from('video')
-                .select('file_url, sumber')
+                .select('file_url, sumber, thumbnail_url')
                 .eq('id_video', id)
                 .single();
 
@@ -113,29 +110,27 @@
                 return;
             }
 
-            const baseVideoUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co/storage/v1/object/public/video/';
+            const baseVideoUrl = supabaseUrl + '/storage/v1/object/public/video/';
+            const baseThumbnailUrl = supabaseUrl + '/storage/v1/object/public/gambar/';
             const isYouTube = video.sumber && video.sumber.includes('YouTube');
 
-            if (video.file_url) {
-                const { error } = await supabase.storage
-                    .from('video')
-                    .remove([video.file_url.replace(baseVideoUrl, '')]);
-                if (error) console.error('Gagal menghapus file video:', error);
-            }
-            
-            if (!isYouTube) {
-                const fileUrl = video.file_url;
-                const basePublicUrl = supabaseUrl + '/storage/v1/object/public/video/';
-                let relativePath = fileUrl.replace(basePublicUrl, '').replace(/^\/+/, '').replace(/\/{2,}/g, '/');
-
+            if (!isYouTube && video.file_url) {
+                const relativePath = video.file_url.replace(baseVideoUrl, '');
                 const { error: deleteFileError } = await supabase.storage
                     .from('video')
                     .remove([relativePath]);
-
                 if (deleteFileError) {
-                    alert('Gagal menghapus file dari storage: ' + deleteFileError.message);
-                    console.error('Storage remove error:', deleteFileError);
-                    return;
+                    console.error('Gagal menghapus file dari storage:', deleteFileError);
+                }
+            }
+
+            if (video.thumbnail_url) {
+                const relativePath = video.thumbnail_url.replace(baseThumbnailUrl, '');
+                const { error: deleteThumbnailError } = await supabase.storage
+                    .from('gambar')
+                    .remove([relativePath]);
+                if (deleteThumbnailError) {
+                    console.error('Gagal menghapus thumbnail dari storage:', deleteThumbnailError);
                 }
             }
 
@@ -162,76 +157,91 @@
         const btn = document.getElementById("openModalBtn");
         const span = document.querySelector(".close");
         const videoForm = document.getElementById('videoForm');
+        const thumbnailInputLabel = document.getElementById('thumbnailInputLabel');
+        const thumbnailInput = document.getElementById('thumbnailInput');
+        const currentThumbnailDiv = document.getElementById('currentThumbnailDiv');
+        const currentThumbnailImg = document.getElementById('currentThumbnailImg');
 
-    window.editVideo = async function (id, creatorId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user.id !== creatorId) {
-            alert("Anda tidak dapat mengedit Video Guru lainnya.");
-            return;
-    }
+        window.editVideo = async function (id, creatorId) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user.id !== creatorId) {
+                alert("Anda tidak dapat mengedit Video Guru lainnya.");
+                return;
+            }
+            
+            const { data, error } = await supabase
+                .from('video')
+                .select('*')
+                .eq('id_video', id)
+                .single();
 
-    const { data, error } = await supabase
-        .from('video')
-        .select('*')
-        .eq('id_video', id)
-        .single();
+            if (error) {
+                alert('Gagal mengambil data video: ' + error.message);
+                return;
+            }
 
-    if (error) {
-        alert('Gagal mengambil data video: ' + error.message);
-        return;
-    }
+            document.querySelector('#videoForm [name="judul"]').value = data.judul;
+            document.querySelector('#videoForm [name="deskripsi"]').value = data.deskripsi;
 
-    document.querySelector('#videoForm [name="judul"]').value = data.judul;
-    document.querySelector('#videoForm [name="deskripsi"]').value = data.deskripsi;
+            currentFileUrl = data.file_url;
+            currentThumbnailUrl = data.thumbnail_url;
+            editingVideoId = id;
 
-    currentFileUrl = data.file_url;
-    editingVideoId = id;
+            document.getElementById("videoModalTitle").innerText = "Edit Video";
+            modal.style.display = "block";
 
-    document.getElementById("videoModalTitle").innerText = "Edit Video";
-    modal.style.display = "block";
+            if (currentThumbnailUrl) {
+                currentThumbnailImg.src = currentThumbnailUrl;
+                currentThumbnailDiv.style.display = 'block';
+            } else {
+                currentThumbnailDiv.style.display = 'none';
+            }
 
-    const isYouTube = data.sumber && data.sumber.includes('YouTube');
+            const isYouTube = data.sumber && data.sumber.includes('YouTube');
 
-    if (isYouTube) {
-        fileInputLabel.style.display = 'none';
-        fileInput.style.display = 'none';
-        atauText.style.display = 'none';
-        youtubeUrlInputLabel.style.display = 'block';
-        youtubeUrlInput.style.display = 'block';
-        youtubeUrlInput.value = data.file_url;
-    } else {
-        fileInputLabel.style.display = 'block';
-        fileInput.style.display = 'block';
-        atauText.style.display = 'none';
-        youtubeUrlInputLabel.style.display = 'none';
-        youtubeUrlInput.style.display = 'none';
-        youtubeUrlInput.value = ''; // Kosongkan nilai
-    }
+            if (isYouTube) {
+                fileInputLabel.style.display = 'none';
+                fileInput.style.display = 'none';
+                atauText.style.display = 'none';
+                youtubeUrlInputLabel.style.display = 'block';
+                youtubeUrlInput.style.display = 'block';
+                youtubeUrlInput.value = `https://www.youtube.com/watch?v=${data.file_url}`;
+            } else {
+                fileInputLabel.style.display = 'block';
+                fileInput.style.display = 'block';
+                atauText.style.display = 'none';
+                youtubeUrlInputLabel.style.display = 'none';
+                youtubeUrlInput.style.display = 'none';
+                youtubeUrlInput.value = '';
+            }
 
-    // Set input 'required' menjadi false saat edit
-    fileInput.required = false;
-    youtubeUrlInput.required = false;
-};
+            fileInput.required = false;
+            youtubeUrlInput.required = false;
+            thumbnailInput.required = false;
+        };
 
 
-btn.onclick = function() {
-    modal.style.display = "block";
-    document.getElementById("videoModalTitle").innerText = "Tambah Video";
-    editingVideoId = null;
-    currentFileUrl = null;
-    videoForm.reset();
+        btn.onclick = function() {
+            modal.style.display = "block";
+            document.getElementById("videoModalTitle").innerText = "Tambah Video";
+            editingVideoId = null;
+            currentFileUrl = null;
+            currentThumbnailUrl = null;
+            videoForm.reset();
+            currentThumbnailDiv.style.display = 'none';
 
-    // Tampilkan kembali semua input saat mode "Tambah"
-    fileInputLabel.style.display = 'block';
-    fileInput.style.display = 'block';
-    atauText.style.display = 'block';
-    youtubeUrlInputLabel.style.display = 'block';
-    youtubeUrlInput.style.display = 'block';
-    
-    // Set required attribute untuk validasi di mode tambah
-    fileInput.required = false;
-    youtubeUrlInput.required = false;
-};
+            fileInputLabel.style.display = 'block';
+            fileInput.style.display = 'block';
+            atauText.style.display = 'block';
+            youtubeUrlInputLabel.style.display = 'block';
+            youtubeUrlInput.style.display = 'block';
+            thumbnailInputLabel.style.display = 'block';
+            thumbnailInput.style.display = 'block';
+            
+            fileInput.required = false;
+            youtubeUrlInput.required = false;
+            thumbnailInput.required = false;
+        };
         
         span.onclick = function() {
             modal.style.display = "none";
@@ -245,127 +255,127 @@ btn.onclick = function() {
         
         videoForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-
-             const loadingDiv = document.getElementById('loadingMessage');
-             loadingDiv.style.display = 'block';
-
+        
+            const loadingDiv = document.getElementById('loadingMessage');
+            loadingDiv.style.display = 'block';
+        
             const formData = new FormData(videoForm);
             const judul = formData.get('judul');
             const deskripsi = formData.get('deskripsi');
             const file = document.getElementById('fileInput').files[0];
-        const youtubeUrl = document.getElementById('youtubeUrlInput').value.trim();
-
-    // Validasi
-    if (!file && !youtubeUrl && !editingVideoId) {
-        alert('Anda harus mengunggah file atau memasukkan URL YouTube.');
-        loadingDiv.style.display = 'none';
-        return;
-    }
-    
-    // Ambil session user
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        alert('Silakan login kembali.');
-        window.location.href = 'login.html';
-        return;
-    }
-    const createdBy = session.user.id;
-    let fileUrl = currentFileUrl; // Inisialisasi dengan URL yang sudah ada
-    let sumber = '';
-
-    // Logika untuk menangani unggah file atau URL YouTube
-    if (file) {
-        // Hapus file lama jika ada dan sedang dalam mode edit
-        if (editingVideoId && currentFileUrl && currentFileUrl.startsWith(supabaseUrl)) {
-            const basePublicUrl = supabaseUrl + '/storage/v1/object/public/video/';
-            const relativePath = currentFileUrl.replace(basePublicUrl, '').replace(/^\/+/, '').replace(/\/{2,}/g, '/');
-            const { error: removeError } = await supabase.storage.from('video').remove([relativePath]);
-            if (removeError) {
-                console.error('Gagal menghapus file lama:', removeError);
+            const youtubeUrl = document.getElementById('youtubeUrlInput').value.trim();
+            const thumbnailFile = document.getElementById('thumbnailInput').files[0];
+            
+            if (!file && !youtubeUrl && !editingVideoId) {
+                alert('Anda harus mengunggah file atau memasukkan URL YouTube.');
+                loadingDiv.style.display = 'none';
+                return;
             }
-        }
         
-        const rawName = file.name.replaceAll(/[^\w.\-]/g, '_');
-        const fileName = `${Date.now()}_${rawName}`;
-        const { data: uploadData, error: uploadError } = await supabase
-            .storage
-            .from('video')
-            .upload(fileName, file, { upsert: true });
-
-        if (uploadError) {
-            alert('Gagal upload file: ' + uploadError.message);
-            loadingDiv.style.display = 'none';
-            return;
-        }
-
-        const { data: publicData } = supabase.storage
-            .from('video')
-            .getPublicUrl(fileName);
-
-        fileUrl = publicData.publicUrl;
-        sumber = 'Internal';
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                alert('Silakan login kembali.');
+                window.location.href = 'login.html';
+                return;
+            }
+            const createdBy = session.user.id;
+            let fileUrl = currentFileUrl;
+            let sumber = '';
+            let thumbnailUrl = currentThumbnailUrl;
         
-    } else if (youtubeUrl) {
-        // Gunakan URL YouTube jika ada
-        fileUrl = youtubeUrl;
-        sumber = 'YouTube';
-    } else if (editingVideoId) {
-        // Jika tidak ada file baru atau URL YouTube, gunakan URL yang sudah ada
-        fileUrl = currentFileUrl;
-        // Pertahankan sumber yang sudah ada
-        const { data: videoData } = await supabase.from('video').select('sumber').eq('id_video', editingVideoId).single();
-        if (videoData) {
-            sumber = videoData.sumber;
-        }
-    }
-
-    let error;
-    if (editingVideoId) {
-        // Mode Edit
-        const res = await supabase
-            .from('video')
-            .update({
-                judul: judul,
-                deskripsi: deskripsi,
-                file_url: fileUrl,
-                sumber: sumber
-            })
-            .eq('id_video', editingVideoId);
-
-        error = res.error;
-        if (!error) {
-            editingVideoId = null;
-            currentFileUrl = null;
-        }
-    } else {
-        // Mode Tambah Baru
-        const res = await supabase
-            .from('video')
-            .insert([
-                {
-                    judul: judul,
-                    deskripsi: deskripsi,
-                    file_url: fileUrl,
-                    sumber: sumber,
-                    created_by: createdBy
+            try {
+                if (thumbnailFile) {
+                    if (editingVideoId && currentThumbnailUrl) {
+                        const baseThumbnailUrl = supabaseUrl + '/storage/v1/object/public/gambar/';
+                        const relativePath = currentThumbnailUrl.replace(baseThumbnailUrl, '').replace(/^\/+/, '').replace(/\/{2,}/g, '/');
+                        const { error: removeError } = await supabase.storage.from('gambar').remove([relativePath]);
+                        if (removeError) console.error('Gagal menghapus thumbnail lama:', removeError.message);
+                    }
+                    const rawName = thumbnailFile.name.replaceAll(/[^\w.\-]/g, '_');
+                    const thumbnailName = `video_thumbnails/${Date.now()}_${rawName}`;
+                    const { error: uploadError } = await supabase
+                        .storage
+                        .from('gambar')
+                        .upload(thumbnailName, thumbnailFile, { upsert: true });
+        
+                    if (uploadError) throw uploadError;
+                    
+                    const { data: publicData } = supabase.storage
+                        .from('gambar')
+                        .getPublicUrl(thumbnailName);
+                    thumbnailUrl = publicData.publicUrl;
                 }
-            ]);
-
-        error = res.error;
-    }
-
-    loadingDiv.style.display = 'none';
-    if (error) {
-        alert('Gagal menyimpan video: ' + error.message);
-        return;
-    }
-
-    alert('Video berhasil disimpan!');
-    modal.style.display = "none";
-    await loadAllVideo();
-    videoForm.reset();
-    document.getElementById('fileInput').value = '';
-    document.getElementById('youtubeUrlInput').value = '';
+        
+                if (file) {
+                    if (editingVideoId && currentFileUrl && currentFileUrl.startsWith(supabaseUrl)) {
+                        const basePublicUrl = supabaseUrl + '/storage/v1/object/public/video/';
+                        const relativePath = currentFileUrl.replace(basePublicUrl, '').replace(/^\/+/, '').replace(/\/{2,}/g, '/');
+                        const { error: removeError } = await supabase.storage.from('video').remove([relativePath]);
+                        if (removeError) console.error('Gagal menghapus file lama:', removeError.message);
+                    }
+                    const rawName = file.name.replaceAll(/[^\w.\-]/g, '_');
+                    const fileName = `${Date.now()}_${rawName}`;
+                    const { error: uploadError } = await supabase
+                        .storage
+                        .from('video')
+                        .upload(fileName, file, { upsert: true });
+        
+                    if (uploadError) throw uploadError;
+        
+                    const { data: publicData } = supabase.storage
+                        .from('video')
+                        .getPublicUrl(fileName);
+                    fileUrl = publicData.publicUrl;
+                    sumber = 'Internal';
+                } else if (youtubeUrl) {
+                    let videoId = '';
+                    try {
+                        const url = new URL(youtubeUrl);
+                        if (url.hostname === 'www.youtube.com' || url.hostname === 'youtube.com') {
+                            videoId = url.searchParams.get('v');
+                        } else if (url.hostname === 'youtu.be') {
+                            videoId = url.pathname.substring(1).split('?')[0];
+                        }
+                    } catch (e) {
+                        console.error("URL YouTube tidak valid", e);
+                    }
+        
+                    if (videoId) {
+                        fileUrl = videoId;
+                        sumber = 'YouTube';
+                    } else {
+                        throw new Error('URL YouTube tidak valid.');
+                    }
+                }
+        
+                let res;
+                if (editingVideoId) {
+                    res = await supabase
+                        .from('video')
+                        .update({ judul, deskripsi, file_url: fileUrl, sumber, thumbnail_url: thumbnailUrl })
+                        .eq('id_video', editingVideoId);
+                } else {
+                    res = await supabase
+                        .from('video')
+                        .insert([{ judul, deskripsi, file_url: fileUrl, sumber, created_by: createdBy, thumbnail_url: thumbnailUrl }]);
+                }
+        
+                if (res.error) throw res.error;
+        
+                alert('Video berhasil disimpan!');
+                modal.style.display = "none";
+                await loadAllVideo();
+                videoForm.reset();
+                document.getElementById('fileInput').value = '';
+                document.getElementById('youtubeUrlInput').value = '';
+                document.getElementById('thumbnailInput').value = '';
+            
+            } catch (error) {
+                console.error('Gagal menyimpan video:', error);
+                alert('Gagal menyimpan video. Silakan coba lagi. Detail: ' + error.message);
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
         });
     </script>
 </head>
@@ -407,47 +417,58 @@ btn.onclick = function() {
         </nav>
     </div> 
 
-        <div>
-            <button id="openModalBtn" class="inline-btn">Tambah +</button>
-            <div id="videoModal" class="modal">
-                <div class="modal-content">
-                    <span class="close">&times;</span>
-                    <h3 id="videoModalTitle">Tambah Video</h3>
-                    <form id="videoForm">
-                        <input type="text" name="judul" placeholder="Judul" required>
-                        <input type="text" name="deskripsi" placeholder="Deskripsi" required>
-                        <div class="form-group">
-                            <label id="fileInputLabel" for="fileInput">Unggah Video:</label>
-                            <input type="file" id="fileInput" accept="video/*" />
-                        </div>
-                        <div id="atauText" class="form-group">
-                            <p style="text-align: center; font-style: italic; font-size: 15px;">ATAU</p>
-                        </div>
-                        <div class="form-group">
-                            <label id="youtubeUrlInputLabel" for="youtubeUrlInput">Link YouTube:</label>
-                            <input type="url" id="youtubeUrlInput" placeholder="https://www.youtube.com/watch?v=..." />
-                        </div>
-                        <button type="submit" class="inline-btn">Simpan</button>
-                    </form>
-                    <div id="loadingMessage" style="display: none; color: blue; font-weight: bold; font-size: 16px;">
-                        Video sedang diunggah...
+    <div>
+        <button id="openModalBtn" class="inline-btn">Tambah +</button>
+        <div id="videoModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h3 id="videoModalTitle">Tambah Video</h3>
+                <form id="videoForm">
+                    <input type="text" name="judul" placeholder="Judul" required>
+                    <input type="text" name="deskripsi" placeholder="Deskripsi" required>
+                    
+                    <div id="currentThumbnailDiv" class="form-group" style="display: none;">
+                        <label>Thumbnail saat ini:</label>
+                        <img id="currentThumbnailImg" src="" alt="Thumbnail Video" style="width: 100px; height: auto; margin-top: 10px;">
                     </div>
+
+                    <div class="form-group">
+                        <label id="thumbnailInputLabel" for="thumbnailInput">Unggah Thumbnail:</label>
+                        <input type="file" id="thumbnailInput" accept="image/*"/>
+                    </div>
+                    <div class="form-group">
+                        <label id="fileInputLabel" for="fileInput">Unggah Video:</label>
+                        <input type="file" id="fileInput" accept="video/*" />
+                    </div>
+                    <div id="atauText" class="form-group">
+                        <p style="text-align: center; font-style: italic; font-size: 15px;">ATAU</p>
+                    </div>
+                    <div class="form-group">
+                        <label id="youtubeUrlInputLabel" for="youtubeUrlInput">Link YouTube:</label>
+                        <input type="url" id="youtubeUrlInput" placeholder="https://www.youtube.com/watch?v=..." />
+                    </div>
+                    <button type="submit" class="inline-btn">Simpan</button>
+                </form>
+                <div id="loadingMessage" style="display: none; color: blue; font-weight: bold; font-size: 16px;">
+                    Video sedang diunggah...
                 </div>
             </div>
         </div>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th>Judul</th>
-                    <th>Deskripsi</th>
-                    <th>File/Link</th>
-                    <th>Dibuat oleh</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody id="videoTableBody">
-            </tbody>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Judul</th>
+                <th>Deskripsi</th>
+                <th>Thumbnail</th>
+                <th>File/Link</th>
+                <th>Dibuat oleh</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="videoTableBody">
+        </tbody>
     </table>
 
     <script src="js/script.js"></script>

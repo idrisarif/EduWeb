@@ -268,7 +268,7 @@
                 }
                 
                 const rawName = thumbnailFile.name.replaceAll(/[^\w.\-]/g, '_');
-                const thumbnailFileName = `thumbnails/${Date.now()}_${rawName}`;
+                const thumbnailFileName = `materi_thumbnails/${Date.now()}_${rawName}`;
                 
                 const { data: uploadData, error: uploadError } = await supabase.storage
                     .from('gambar')
