@@ -1,370 +1,456 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Data Video</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Video</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
 
-   <!-- font awesome cdn link  -->
-   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js'
 
-   <!-- custom css file link  -->
-   <link rel="stylesheet" href="css/style.css">
+        const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
+        const supabase = createClient(supabaseUrl, supabaseKey)
 
-   <script type="module">
-      import { createClient } from 'https://esm.sh/@supabase/supabase-js'
-  
-      const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
-      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
-      const supabase = createClient(supabaseUrl, supabaseKey)
-  
-      // Saat halaman dimuat
-      window.addEventListener('DOMContentLoaded', async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-  
-        if (session) {
-         // ✅ Session ada, boleh akses halaman
-         console.log('Login OK:', session.user.email)
-       } else {
-         // 🕓 Cek ulang jika session belum tersedia
-         supabase.auth.onAuthStateChange((event, session) => {
-           if (!session) {
-             window.location.href = 'login.html'
-           }
-          })
-        }
-      })
+        let editingVideoId = null;
+        let currentFileUrl = null;
 
-      const logoutBtn = document.getElementById('logoutBtn')
-      
-      logoutBtn.addEventListener('click', async () => {
-         const { error } = await supabase.auth.signOut()
-         if (error) {
-            alert('Gagal logout: ' + error.message)
-            return
-         }
-         // Hapus data dari localStorage (jika ada)
-         localStorage.clear()
-         // Arahkan ke halaman login
-         window.location.href = 'login.html'
-      })
-      // tampilkan nama dari localStorage
-      document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
+        window.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabase.auth.getSession()
 
-      // Fungsi memuat semua data materi
-      async function loadAllMateri() {
-        const { data, error } = await supabase
-          .from('materi')
-          .select(`
-            id_materi,
-            judul,
-            deskripsi,
-            file_url,
-            created_by,
-            user:created_by (nama)
-          `);
-      
-        if (error) {
-          console.error('Gagal mengambil data:', error);
-          return;
-        }
-      
-        const tableBody = document.getElementById('materiTableBody');
-        tableBody.innerHTML = '';
-      
-        data.forEach(materi => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${materi.judul}</td>
-            <td>${materi.deskripsi}</td>
-            <td><a href="${materi.file_url}" target="_blank">Lihat File</a></td>
-            <td>${materi.user?.nama || 'Tidak diketahui'}</td>
-              <button onclick="editMateri('${materi.id_materi}')">Edit</button>
-              <button onclick="deleteMateri('${materi.id_materi}')">Hapus</button>
-            </td>
-          `;
-          tableBody.appendChild(row);
-        });
-      }
-      
-      loadAllMateri();
-      
-      let editingMateriId = null;
-      let currentFileUrl = null; // menyimpan file_url lama saat edit
-      
-      window.deleteMateri = async function(id) {
-        // Ambil data materi dulu (untuk dapatkan file_url)
-        const { data: materi, error: fetchError } = await supabase
-          .from('materi')
-          .select('file_url')
-          .eq('id_materi', id)
-          .single();
-      
-        if (fetchError) {
-          alert('Gagal mengambil data materi: ' + fetchError.message);
-          return;
-        }
-      
-        // Ekstrak path relatif file (tanpa /storage/v1/object/public/materi/)
-        const fileUrl = materi.file_url;
-        const basePublicUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co/storage/v1/object/public/materi/';
+            if (session) {
+                console.log('Login OK:', session.user.email)
+                document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
+                loadAllVideo()
+            } else {
+                supabase.auth.onAuthStateChange((event, session) => {
+                    if (!session) {
+                        window.location.href = 'login.html'
+                    }
+                })
+            }
+        })
+
+        const logoutBtn = document.getElementById('logoutBtn')
+
+        logoutBtn.addEventListener('click', async () => {
+            const { error } = await supabase.auth.signOut()
+            if (error) {
+                alert('Gagal logout: ' + error.message)
+                return
+            }
+            localStorage.clear()
+            window.location.href = 'login.html'
+        })
+
+        // Fungsi memuat semua data video
+        async function loadAllVideo() {
+            const { data, error } = await supabase
+                .from('video')
+                .select(`
+                    id_video,
+                    judul,
+                    deskripsi,
+                    file_url,
+                    sumber,
+                    created_at,
+                    created_by,
+                    user:created_by (nama)
+                `);
+
+            if (error) {
+                console.error('Gagal mengambil data:', error);
+                return;
+            }
+
+            const tableBody = document.getElementById('videoTableBody');
+            tableBody.innerHTML = '';
+
+            data.forEach(video => {
+                const row = document.createElement('tr');
+                const isYouTube = video.sumber && video.sumber.includes('YouTube');
+                const fileLinkText = isYouTube ? 'Tonton di YouTube' : 'Lihat File';
+                const fileLink = isYouTube ? video.file_url : video.file_url;
+
+                row.innerHTML = `
+                    <td>${video.judul}</td>
+                    <td>${video.deskripsi}</td>
+                    <td><a href="${fileLink}" target="_blank">${fileLinkText}</a></td>
+                    <td>${video.user?.nama || 'Tidak diketahui'}</td>
+                    <td>
+                        <button onclick="editVideo('${video.id_video}', '${video.created_by}')">Edit</button>
+                        <button onclick="deleteVideo('${video.id_video}', '${video.created_by}')">Hapus</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }   
+
+        loadAllVideo();
+
+        window.deleteVideo = async function(id, creatorId) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user.id !== creatorId) {
+                alert("Anda tidak dapat menghapus Video Guru lainnya.");
+                return;
+            }
+
+            if (!confirm('Apakah Anda yakin ingin menghapus video ini?')) {
+                return;
+            }
+            
+            const { data: video, error: fetchError } = await supabase
+                .from('video')
+                .select('file_url, sumber')
+                .eq('id_video', id)
+                .single();
+
+            if (fetchError) {
+                alert('Gagal mengambil data video: ' + fetchError.message);
+                return;
+            }
+
+            const baseVideoUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co/storage/v1/object/public/video/';
+            const isYouTube = video.sumber && video.sumber.includes('YouTube');
+
+            if (video.file_url) {
+                const { error } = await supabase.storage
+                    .from('video')
+                    .remove([video.file_url.replace(baseVideoUrl, '')]);
+                if (error) console.error('Gagal menghapus file video:', error);
+            }
+            
+            if (!isYouTube) {
+                const fileUrl = video.file_url;
+                const basePublicUrl = supabaseUrl + '/storage/v1/object/public/video/';
+                let relativePath = fileUrl.replace(basePublicUrl, '').replace(/^\/+/, '').replace(/\/{2,}/g, '/');
+
+                const { error: deleteFileError } = await supabase.storage
+                    .from('video')
+                    .remove([relativePath]);
+
+                if (deleteFileError) {
+                    alert('Gagal menghapus file dari storage: ' + deleteFileError.message);
+                    console.error('Storage remove error:', deleteFileError);
+                    return;
+                }
+            }
+
+            const { error: deleteVideoError } = await supabase
+                .from('video')
+                .delete()
+                .eq('id_video', id);
+
+            if (deleteVideoError) {
+                alert('Gagal menghapus data video: ' + deleteVideoError.message);
+                return;
+            }
+
+            alert('Video berhasil dihapus!');
+            await loadAllVideo();
+        };
         
-        let relativePath = fileUrl.replace(basePublicUrl, '').replace(/^\/+/, '').replace(/\/{2,}/g, '/');
-      
-        // Hapus file dari storage
-        const { error: deleteFileError } = await supabase.storage
-          .from('materi')
-          .remove([relativePath]);
-      
-        if (deleteFileError) {
-          alert('Gagal menghapus file dari storage: ' + deleteFileError.message);
-          console.error('Storage remove error:', deleteFileError);
-          return;
-        }
-      
-        // Hapus data dari tabel
-        const { error: deleteMateriError } = await supabase
-          .from('materi')
-          .delete()
-          .eq('id_materi', id);
-      
-        if (deleteMateriError) {
-          alert('Gagal menghapus data materi: ' + deleteMateriError.message);
-          return;
-        }
-      
-        alert('Materi berhasil dihapus!');
-        await loadAllMateri();
-      };      
-      
-      window.editMateri = async function(id) {
-        const { data, error } = await supabase
-          .from('materi')
-          .select('*')
-          .eq('id_materi', id)
-          .single();
-      
-        if (error) {
-          alert('Gagal mengambil data materi: ' + error.message);
-          return;
-        }
-      
-        document.querySelector('#materiForm [name="judul"]').value = data.judul;
-        document.querySelector('#materiForm [name="deskripsi"]').value = data.deskripsi;
-      
-        currentFileUrl = data.file_url;
-        editingMateriId = id;
-        document.getElementById("materiModalTitle").innerText = "Edit Materi";
-        modal.style.display = "block";
-      
-        // Sembunyikan input file dan hilangkan required saat edit
-        document.getElementById('fileInput').style.display = 'none';
-        document.getElementById('fileInput').required = false;
-
+        const fileInputLabel = document.getElementById('fileInputLabel');
         const fileInput = document.getElementById('fileInput');
-        fileInput.style.display = 'none';      // sembunyikan input file
-        fileInput.required = false;            // tidak wajib
-      }
-      
-      const materiForm = document.getElementById('materiForm');
-      materiForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-      
-        // Tampilkan pesan loading
-        const loadingDiv = document.getElementById('loadingMessage');
-        loadingDiv.style.display = 'block';
-      
-        const formData = new FormData(materiForm);
-        const materiData = Object.fromEntries(formData.entries());
-      
-        let fileUrl = currentFileUrl;
-        const file = document.getElementById('fileInput').files[0];
-      
-        if (file) {
-          const rawName = file.name.replaceAll(/[^\w.\-]/g, '_'); // hilangkan karakter aneh
-          const fileName = `${Date.now()}_${rawName}`; // tanpa slash di depan
-          const { data: uploadData, error: uploadError } = await supabase
-            .storage
-            .from('materi')
-            .upload(fileName, file, { upsert: true });
-        
-      
-          if (uploadError) {
-            alert('Gagal upload file: ' + uploadError.message);
-            loadingDiv.style.display = 'none'; // Sembunyikan pesan loading
-            return;
-          }
-      
-          const { data: publicData } = supabase.storage
-            .from('materi')
-            .getPublicUrl(fileName);
-      
-          fileUrl = publicData.publicUrl;
-        }
-      
-        let error;
-        if (editingMateriId) {
-          const res = await supabase
-            .from('materi')
-            .update({
-              ...materiData,
-              file_url: fileUrl
-            })
-            .eq('id_materi', editingMateriId);
-      
-          error = res.error;
-          if (!error) {
-            editingMateriId = null;
-            currentFileUrl = null;
-          }
-        } else {
-          const res = await supabase
-            .from('materi')
-            .insert([
-              {
-                ...materiData,
-                file_url: fileUrl
-              }
-            ]);
-      
-          error = res.error;
-        }
-      
-        // Sembunyikan pesan loading setelah selesai
-        loadingDiv.style.display = 'none';
-      
-        if (error) {
-          alert('Gagal menyimpan materi: ' + error.message);
-          return;
-        }
-      
-        alert('Materi berhasil disimpan!');
-        modal.style.display = "none";
-        await loadAllMateri();
-        materiForm.reset();
-        document.getElementById('fileInput').value = '';
-      });      
-    </script>
+        const atauText = document.getElementById('atauText');
+        const youtubeUrlInputLabel = document.getElementById('youtubeUrlInputLabel');
+        const youtubeUrlInput = document.getElementById('youtubeUrlInput');
+        const modal = document.getElementById("videoModal");
+        const btn = document.getElementById("openModalBtn");
+        const span = document.querySelector(".close");
+        const videoForm = document.getElementById('videoForm');
 
+    window.editVideo = async function (id, creatorId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user.id !== creatorId) {
+            alert("Anda tidak dapat mengedit Video Guru lainnya.");
+            return;
+    }
+
+    const { data, error } = await supabase
+        .from('video')
+        .select('*')
+        .eq('id_video', id)
+        .single();
+
+    if (error) {
+        alert('Gagal mengambil data video: ' + error.message);
+        return;
+    }
+
+    document.querySelector('#videoForm [name="judul"]').value = data.judul;
+    document.querySelector('#videoForm [name="deskripsi"]').value = data.deskripsi;
+
+    currentFileUrl = data.file_url;
+    editingVideoId = id;
+
+    document.getElementById("videoModalTitle").innerText = "Edit Video";
+    modal.style.display = "block";
+
+    const isYouTube = data.sumber && data.sumber.includes('YouTube');
+
+    if (isYouTube) {
+        fileInputLabel.style.display = 'none';
+        fileInput.style.display = 'none';
+        atauText.style.display = 'none';
+        youtubeUrlInputLabel.style.display = 'block';
+        youtubeUrlInput.style.display = 'block';
+        youtubeUrlInput.value = data.file_url;
+    } else {
+        fileInputLabel.style.display = 'block';
+        fileInput.style.display = 'block';
+        atauText.style.display = 'none';
+        youtubeUrlInputLabel.style.display = 'none';
+        youtubeUrlInput.style.display = 'none';
+        youtubeUrlInput.value = ''; // Kosongkan nilai
+    }
+
+    // Set input 'required' menjadi false saat edit
+    fileInput.required = false;
+    youtubeUrlInput.required = false;
+};
+
+
+btn.onclick = function() {
+    modal.style.display = "block";
+    document.getElementById("videoModalTitle").innerText = "Tambah Video";
+    editingVideoId = null;
+    currentFileUrl = null;
+    videoForm.reset();
+
+    // Tampilkan kembali semua input saat mode "Tambah"
+    fileInputLabel.style.display = 'block';
+    fileInput.style.display = 'block';
+    atauText.style.display = 'block';
+    youtubeUrlInputLabel.style.display = 'block';
+    youtubeUrlInput.style.display = 'block';
+    
+    // Set required attribute untuk validasi di mode tambah
+    fileInput.required = false;
+    youtubeUrlInput.required = false;
+};
+        
+        span.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        };
+        
+        videoForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+             const loadingDiv = document.getElementById('loadingMessage');
+             loadingDiv.style.display = 'block';
+
+            const formData = new FormData(videoForm);
+            const judul = formData.get('judul');
+            const deskripsi = formData.get('deskripsi');
+            const file = document.getElementById('fileInput').files[0];
+        const youtubeUrl = document.getElementById('youtubeUrlInput').value.trim();
+
+    // Validasi
+    if (!file && !youtubeUrl && !editingVideoId) {
+        alert('Anda harus mengunggah file atau memasukkan URL YouTube.');
+        loadingDiv.style.display = 'none';
+        return;
+    }
+    
+    // Ambil session user
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+        alert('Silakan login kembali.');
+        window.location.href = 'login.html';
+        return;
+    }
+    const createdBy = session.user.id;
+    let fileUrl = currentFileUrl; // Inisialisasi dengan URL yang sudah ada
+    let sumber = '';
+
+    // Logika untuk menangani unggah file atau URL YouTube
+    if (file) {
+        // Hapus file lama jika ada dan sedang dalam mode edit
+        if (editingVideoId && currentFileUrl && currentFileUrl.startsWith(supabaseUrl)) {
+            const basePublicUrl = supabaseUrl + '/storage/v1/object/public/video/';
+            const relativePath = currentFileUrl.replace(basePublicUrl, '').replace(/^\/+/, '').replace(/\/{2,}/g, '/');
+            const { error: removeError } = await supabase.storage.from('video').remove([relativePath]);
+            if (removeError) {
+                console.error('Gagal menghapus file lama:', removeError);
+            }
+        }
+        
+        const rawName = file.name.replaceAll(/[^\w.\-]/g, '_');
+        const fileName = `${Date.now()}_${rawName}`;
+        const { data: uploadData, error: uploadError } = await supabase
+            .storage
+            .from('video')
+            .upload(fileName, file, { upsert: true });
+
+        if (uploadError) {
+            alert('Gagal upload file: ' + uploadError.message);
+            loadingDiv.style.display = 'none';
+            return;
+        }
+
+        const { data: publicData } = supabase.storage
+            .from('video')
+            .getPublicUrl(fileName);
+
+        fileUrl = publicData.publicUrl;
+        sumber = 'Internal';
+        
+    } else if (youtubeUrl) {
+        // Gunakan URL YouTube jika ada
+        fileUrl = youtubeUrl;
+        sumber = 'YouTube';
+    } else if (editingVideoId) {
+        // Jika tidak ada file baru atau URL YouTube, gunakan URL yang sudah ada
+        fileUrl = currentFileUrl;
+        // Pertahankan sumber yang sudah ada
+        const { data: videoData } = await supabase.from('video').select('sumber').eq('id_video', editingVideoId).single();
+        if (videoData) {
+            sumber = videoData.sumber;
+        }
+    }
+
+    let error;
+    if (editingVideoId) {
+        // Mode Edit
+        const res = await supabase
+            .from('video')
+            .update({
+                judul: judul,
+                deskripsi: deskripsi,
+                file_url: fileUrl,
+                sumber: sumber
+            })
+            .eq('id_video', editingVideoId);
+
+        error = res.error;
+        if (!error) {
+            editingVideoId = null;
+            currentFileUrl = null;
+        }
+    } else {
+        // Mode Tambah Baru
+        const res = await supabase
+            .from('video')
+            .insert([
+                {
+                    judul: judul,
+                    deskripsi: deskripsi,
+                    file_url: fileUrl,
+                    sumber: sumber,
+                    created_by: createdBy
+                }
+            ]);
+
+        error = res.error;
+    }
+
+    loadingDiv.style.display = 'none';
+    if (error) {
+        alert('Gagal menyimpan video: ' + error.message);
+        return;
+    }
+
+    alert('Video berhasil disimpan!');
+    modal.style.display = "none";
+    await loadAllVideo();
+    videoForm.reset();
+    document.getElementById('fileInput').value = '';
+    document.getElementById('youtubeUrlInput').value = '';
+        });
+    </script>
 </head>
 <body>
 
-   <header class="header">
-   
-      <section class="flex">
-   
-         <a href="admin.html" class="logo">EduWeb</a>
-   
-         <div class="icons">
-            <div id="menu-btn" class="fas fa-bars"></div>
-            <div id="user-btn" class="fas fa-user"></div>
-            <div id="toggle-btn" class="fas fa-sun"></div>
-         </div>
-   
-         <div class="profile">
-            <p class="role">Halo<p>
-            <h3 class="name" id="userName"></h3>
-            <p><span id="role"></span>
-               <a id="logoutBtn" class="delete-btn">Keluar</a>
-         </div>
-   
-      </section>
-   
-   </header>
-   
-   <div class="side-bar">
-   
-      <div id="close-btn">
-         <i class="fas fa-times"></i>
-      </div>
-   
-      <div class="profile">
-         <img src="images/pic-1.jpg" class="image" alt="">
-         <h3 class="role">Eduweb</h3>
-   
-         <h2 class="name">Daftar Menu</h2>
-      </div>
-   
-      <nav class="navbar">
-        <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
-        <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
-        <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
-        <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
-        <a href="admin-courses3.html"><i class="fas fa-list"></i><span>Data Jawaban</span></a>
-        <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
-     </nav>
-   
-   </div>   
-     <div>
-      <button id="openModalBtn">Tambah +</button>
-      <div id="materiModal" class="modal">
-        <div class="modal-content">
-          <span class="close">&times;</span>
-          <h3 id="materiModalTitle">Tambah Materi</h3>
-          <form id="materiForm">
-            <input type="text" name="judul" placeholder="Judul" required>
-            <input type="text" name="deskripsi" placeholder="Deskripsi" required>
-            <input type="file" id="fileInput" accept="application/pdf"/>
-            <button type="submit">Simpan</button>
-          </form>
-          <div id="loadingMessage" style="display: none; color: blue; font-weight: bold; font-size: 16px;">
-            Materi sedang diunggah...
-          </div>          
+    <header class="header">
+        <section class="flex">
+            <a href="admin.html" class="logo">EduWeb</a>
+            <div class="icons">
+                <div id="menu-btn" class="fas fa-bars"></div>
+                <div id="user-btn" class="fas fa-user"></div>
+                <div id="toggle-btn" class="fas fa-sun"></div>
+            </div>
+            <div class="profile">
+                <p class="role">Halo</p>
+                <h3 class="name" id="userName"></h3>
+                <p><span id="role"></span></p>
+                <a id="logoutBtn" class="delete-btn">Keluar</a>
+            </div>
+        </section>
+    </header>
+    
+    <div class="side-bar">
+        <div id="close-btn">
+            <i class="fas fa-times"></i>
         </div>
-      </div>
-      
-      <script>
-          const modal = document.getElementById("materiModal");
-          const btn = document.getElementById("openModalBtn");
-          const span = document.querySelector(".close");
+        <div class="profile">
+            <img src="images/pic-1.jpg" class="image" alt="">
+            <h3 class="role">Eduweb</h3>
+            <h2 class="name">Daftar Menu</h2>
+        </div>
+        <nav class="navbar">
+            <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
+            <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
+            <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
+            <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
+            <a href="admin-courses3.html"><i class="fas fa-list"></i><span>Data Jawaban</span></a>
+            <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
+        </nav>
+    </div> 
 
-          document.getElementById('fileInput').style.display = 'block';
-          document.getElementById('fileInput').required = true;
+        <div>
+            <button id="openModalBtn" class="inline-btn">Tambah +</button>
+            <div id="videoModal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h3 id="videoModalTitle">Tambah Video</h3>
+                    <form id="videoForm">
+                        <input type="text" name="judul" placeholder="Judul" required>
+                        <input type="text" name="deskripsi" placeholder="Deskripsi" required>
+                        <div class="form-group">
+                            <label id="fileInputLabel" for="fileInput">Unggah Video:</label>
+                            <input type="file" id="fileInput" accept="video/*" />
+                        </div>
+                        <div id="atauText" class="form-group">
+                            <p style="text-align: center; font-style: italic; font-size: 15px;">ATAU</p>
+                        </div>
+                        <div class="form-group">
+                            <label id="youtubeUrlInputLabel" for="youtubeUrlInput">Link YouTube:</label>
+                            <input type="url" id="youtubeUrlInput" placeholder="https://www.youtube.com/watch?v=..." />
+                        </div>
+                        <button type="submit" class="inline-btn">Simpan</button>
+                    </form>
+                    <div id="loadingMessage" style="display: none; color: blue; font-weight: bold; font-size: 16px;">
+                        Video sedang diunggah...
+                    </div>
+                </div>
+            </div>
+        </div>
         
-          btn.onclick = function() {
-            modal.style.display = "block";
-            document.getElementById("materiModalTitle").innerText = "Tambah Materi";
-            editingMateriId = null;
-            currentFileUrl = null;
-            materiForm.reset();
-          
-            // ✅ Tampilkan kembali input file
-            const fileInput = document.getElementById('fileInput');
-            fileInput.style.display = 'block';     // tampilkan lagi
-            fileInput.required = true;             // wajibkan lagi
-            fileInput.value = '';                  // bersihkan jika sebelumnya ada sisa file
-          }
-        
-          span.onclick = function() {
-            modal.style.display = "none";
-          }
+        <table>
+            <thead>
+                <tr>
+                    <th>Judul</th>
+                    <th>Deskripsi</th>
+                    <th>File/Link</th>
+                    <th>Dibuat oleh</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="videoTableBody">
+            </tbody>
+    </table>
 
-          window.onclick = function(event) {
-            if (event.target === modal) {
-              modal.style.display = "none";
-            }
-          }
-        </script>
-     </div>
-   
-     <table>
-       <thead>
-         <tr>
-           <th>Judul</th>
-           <th>Deskripsi</th>
-           <th>File path</th>
-           <th>Dibuat oleh</th>
-           <th>Aksi</th>
-         </tr>
-       </thead>
-       <tbody id="materiTableBody">
-         <!-- Data user akan dimuat di sini -->
-       </tbody>
-     </table>
-
-<!-- custom js file link  -->
-<script src="js/script.js"></script>
+    <script src="js/script.js"></script>
 
 </body>
 </html>

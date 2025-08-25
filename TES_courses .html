@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Materi</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+ 
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+        const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        async function getMateri() {
+            const { data: materiList, error } = await supabase
+                .from('materi')
+                .select(`
+                    id_materi,
+                    judul,
+                    deskripsi,
+                    file_url,
+                    thumbnail_url,
+                    created_at,
+                    user (
+                        nama
+                    )
+                `);
+
+            if (error) {
+                console.error('Error fetching materi:', error);
+                return;
+            }
+
+            renderMateri(materiList);
+        }
+
+        function renderMateri(materiList) {
+            const container = document.querySelector('.box-container');
+            container.innerHTML = '';
+            let materiCounter = 1;
+
+            if (materiList.length === 0) {
+                container.innerHTML = '<p class="empty">Belum ada materi yang tersedia.</p>';
+                return;
+            }
+
+            materiList.forEach(materi => {
+                const box = document.createElement('div');
+                box.classList.add('box');
+
+                const thumbDiv = document.createElement('div');
+                thumbDiv.classList.add('thumb');
+
+                if (materi.thumbnail_url) {
+                    const img = document.createElement('img');
+                    img.src = materi.thumbnail_url;
+                    img.alt = materi.judul + ' Thumbnail';
+                    thumbDiv.appendChild(img);
+                } else {
+                    const icon = document.createElement('i');
+                    icon.classList.add('fas', 'fa-file-pdf');
+                    thumbDiv.appendChild(icon);
+                }
+
+                const predikat = document.createElement('p');
+                predikat.classList.add('predikat');
+                predikat.textContent = `Materi ke-${materiCounter++}`;
+
+                const title = document.createElement('h3');
+                title.classList.add('title');
+                title.textContent = materi.judul;
+
+                const tutorName = document.createElement('p');
+                tutorName.classList.add('tutor-name');
+                tutorName.textContent = `Oleh: ${materi.user?.nama || 'Pengguna Tidak Dikenal'}`;
+
+                const description = document.createElement('p');
+                description.classList.add('description');
+                description.textContent = materi.deskripsi;
+
+                const link = document.createElement('a');
+                link.href = `pdf-viewer.html?materiId=${materi.id_materi}`;
+                link.classList.add('inline-btn');
+                link.textContent = 'Lihat Materi';
+
+                box.appendChild(predikat);
+                box.appendChild(thumbDiv);
+                box.appendChild(title);
+                box.appendChild(tutorName);
+                box.appendChild(description);
+                box.appendChild(link);
+
+                container.appendChild(box);
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+                console.log('Login OK:', session.user.email);
+                getMateri();
+            } else {
+                supabase.auth.onAuthStateChange((event, session) => {
+                    if (!session) {
+                        window.location.href = 'login.html';
+                    }
+                });
+            }
+        });
+
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                const { error } = await supabase.auth.signOut();
+                if (error) {
+                    alert('Gagal logout: ' + error.message);
+                    return;
+                }
+                localStorage.clear();
+                window.location.href = 'login.html';
+            });
+        }
+
+        const userNameElement = document.getElementById('userName');
+        if (userNameElement) {
+            const storedName = localStorage.getItem('nama');
+            if (storedName) {
+                userNameElement.innerText = storedName;
+            } else {
+                supabase.auth.getUser().then(async ({ data: { user } }) => {
+                    if (user) {
+                        const { data, error } = await supabase
+                            .from('user')
+                            .select('nama')
+                            .eq('user_id', user.id)
+                            .single();
+                        if (data) {
+                            userNameElement.innerText = data.nama;
+                            localStorage.setItem('nama', data.nama);
+                        }
+                    }
+                });
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <header class="header">
+        <section class="flex">
+            <a href="home.html" class="logo">EduWeb</a>
+            <div class="icons">
+                <div id="menu-btn" class="fas fa-bars"></div>
+                <div id="user-btn" class="fas fa-user"></div>
+                <div id="toggle-btn" class="fas fa-sun"></div>
+            </div>
+            <div class="profile">
+                <p class="role">Halo</p>
+                <h3 class="name" id="userName"></h3>
+                <a id="logoutBtn" class="delete-btn">Keluar</a>
+            </div>
+        </section>
+    </header>
+
+    <div class="side-bar">
+        <div id="close-btn">
+            <i class="fas fa-times"></i>
+        </div>
+        <div class="profile">
+            <img src="images/pic-1.jpg" class="image" alt="">
+            <h3 class="role">Eduweb</h3>
+            <h2 class="name">Daftar Menu</h2>
+        </div>
+        <nav class="navbar">
+            <a href="home.html"><i class="fas fa-home"></i><span>Beranda</span></a>
+            <a href="courses.html"><i class="fas fa-book"></i><span>Materi</span></a>
+            <a href="playlist.html"><i class="fas fa-play-circle"></i><span>Video</span></a>
+            <a href="courses2.html"><i class="fas fa-edit"></i><span>Tugas</span></a>
+        </nav>
+    </div>
+
+    <section class="courses">
+        <h1 class="heading">Daftar Materi</h1>
+        <div class="box-container">
+            </div>
+    </section>
+
+    <script src="js/script.js"></script>
+
+</body>
+</html>
