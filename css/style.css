@@ -141,9 +141,69 @@ section{
    color: var(--white);
 }
 
+.nilai-btn {
+   padding: 6px 12px;
+   background-color: #28a745; /* Warna hijau yang lebih cerah */
+   color: white;
+   border: none;
+   border-radius: 4px;
+   cursor: pointer;
+   font-weight: bold;
+   transition: background-color 0.3s ease;
+}
+
+.nilai-btn:hover {
+   background-color: #218838; /* Warna hijau yang sedikit lebih gelap saat di-hover */
+}
+
 .flex-btn{
    display: flex;
    gap: 1rem;
+}
+
+/* Gaya untuk tombol Unduh Excel yang lebih kecil dan kotak */
+.btn-primary {
+   width: auto; /* Mengatur lebar agar menyesuaikan konten */
+   border-radius: 5px; /* Membuat sudut sedikit membulat */
+   padding: 10px 18px;
+   font-size: 16px;
+   color: white;
+   border: none;
+   border-radius: 6px;
+   cursor: pointer;
+   text-align: right;
+   margin-top: 10px;
+   margin-right: 10px;
+   margin-left: 10px;
+}
+
+/* Mengatur tampilan keseluruhan div filter */
+.filter-controls {
+   display: flex; /* Mengatur elemen di dalamnya menjadi satu baris */
+   align-items: center; /* Menyelaraskan elemen secara vertikal */
+   flex-wrap: wrap; /* Memastikan elemen turun ke baris baru jika ruang tidak cukup */
+   gap: 1.5rem; /* Memberikan jarak antar elemen filter */
+   margin-top: 2rem; /* Menambah jarak atas dari tombol 'Unduh Excel' */
+   margin-bottom: 2rem; /* Menambah jarak bawah ke tabel */
+   padding: 1rem 0; /* Memberikan sedikit padding di atas dan bawah */
+}
+
+/* Mengatur label filter (Filter Kelas, Filter Jurusan, dst) */
+.filter-controls label {
+   font-size: 1.6rem; /* Memperbesar ukuran font label */
+   font-weight: 500;
+   color: var(--black); /* Menggunakan warna teks yang sudah ditentukan */
+}
+
+/* Mengatur dropdown select */
+.filter-controls select {
+   padding: 0.8rem 1.2rem; /* Menambah padding untuk tampilan yang lebih besar */
+   border: var(--border); /* Menggunakan border yang sudah ada di tema */
+   border-radius: .5rem; /* Sedikit melengkungkan sudut */
+   background-color: var(--white); /* Menggunakan warna latar belakang putih */
+   color: var(--black);
+   font-size: 1.6rem; /* Ukuran font yang lebih besar untuk konten dropdown */
+   cursor: pointer;
 }
 
 .header{
@@ -768,8 +828,15 @@ section{
    background-color: var(--white);
    border-radius: .5rem;
    padding: 2rem;
-   max-width: 900px;
+   max-width: 100%;
    margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+    .watch-video .video-container{
+        /* Sesuaikan lebar video-container untuk layar yang lebih besar */
+        max-width: 500px; /* Lebar 500px khusus untuk PC */
+    }
 }
 
 .watch-video .video-container .video{
@@ -1748,4 +1815,17 @@ section{
 @keyframes fadeIn {
    from { opacity: 0; transform: translateY(-20px); }
    to { opacity: 1; transform: translateY(0); }
+}
+
+@media print {
+   /* Sembunyikan elemen yang tidak perlu dicetak, seperti sidebar dan tombol unduh */
+   .side-bar, .header, #downloadExcelBtn {
+       display: none;
+   }
+
+   /* Atur tata letak tabel agar sesuai dengan kertas */
+   table {
+       width: 100%;
+       font-size: 11pt;
+   }
 }

@@ -1,253 +1,458 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Data Tugas</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Jawaban</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-   <!-- font awesome cdn link  -->
-   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js';
 
-   <!-- custom css file link  -->
-   <link rel="stylesheet" href="css/style.css">
+        const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg';
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
-   <script type="module">
-      import { createClient } from 'https://esm.sh/@supabase/supabase-js'
-  
-      const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
-      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
-      const supabase = createClient(supabaseUrl, supabaseKey)
-  
-      // Saat halaman dimuat
-      window.addEventListener('DOMContentLoaded', async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-  
-        if (session) {
-         // ✅ Session ada, boleh akses halaman
-         console.log('Login OK:', session.user.email)
-       } else {
-         // 🕓 Cek ulang jika session belum tersedia
-         supabase.auth.onAuthStateChange((event, session) => {
-           if (!session) {
-             window.location.href = 'login.html'
-           }
-          })
+        let selectedJawabanId = null;
+        let currentFilteredData = [];
+
+        // Fungsi untuk menutup modal penilaian
+        function closeNilaiModal() {
+            const modal = document.getElementById('nilaiModal');
+            modal.style.display = 'none';
+            document.getElementById('nilaiForm').reset();
+            selectedJawabanId = null;
         }
-      })
 
-      const logoutBtn = document.getElementById('logoutBtn')
-      
-      logoutBtn.addEventListener('click', async () => {
-         const { error } = await supabase.auth.signOut()
-         if (error) {
-            alert('Gagal logout: ' + error.message)
-            return
-         }
-         // Hapus data dari localStorage (jika ada)
-         localStorage.clear()
-         // Arahkan ke halaman login
-         window.location.href = 'login.html'
-      })
-      // tampilkan nama dari localStorage
-      document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
+        // FUNGSI UTAMA YANG DIREVISI TOTAL
+async function loadAndFilterJawaban() {
+    const tableBody = document.getElementById('jawabanTableBody');
+    tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Memuat data...</td></tr>';
 
-      let selectedNilaiId = null;
-  
-      async function loadAllJawaban() {
-        const { data, error } = await supabase
-          .from('jawaban')
-          .select('id_jawaban, user:created_by(nama), file_url, skor, created_at');
-      
-        if (error) {
-          console.error('Gagal mengambil data:', error);
-          return;
+    const selectedKelas = document.getElementById('filterKelas').value;
+    const selectedJurusan = document.getElementById('filterJurusan').value;
+    const selectedTugas = document.getElementById('filterTugas').value;
+
+    let query = supabase.from('jawaban').select(`
+        id_jawaban,
+        file_url,
+        created_at,
+        skor,
+        user:created_by(nama, absen, kelas, jurusan),
+        tugas:id_tugas(judul, id_tugas)
+    `);
+
+    // Tambahkan kondisi filter secara dinamis
+    if (selectedKelas) {
+        query = query.filter('user.kelas', 'eq', selectedKelas);
+    }
+    if (selectedJurusan) {
+        query = query.filter('user.jurusan', 'eq', selectedJurusan);
+    }
+    if (selectedTugas) {
+        // Ini adalah poin kritis. Supabase tidak bisa memfilter `tugas.judul`
+        // pada select join. Solusinya adalah mencari ID tugas terlebih dahulu.
+        const { data: tugasData, error: tugasError } = await supabase
+            .from('tugas')
+            .select('id_tugas')
+            .eq('judul', selectedTugas)
+            .single();
+
+        if (tugasError || !tugasData) {
+            console.error('Tugas tidak ditemukan atau gagal mengambil ID:', tugasError);
+            tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Tugas tidak ditemukan.</td></tr>';
+            return;
         }
-  
-        const tableBody = document.getElementById('jawabanTableBody');
-        tableBody.innerHTML = '';
-  
-        data.forEach(jawaban => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${jawaban.user?.nama}</td>  
-            <td><a href="${jawaban.file_url}" target="_blank">Lihat File</a></td>
-            <td>${jawaban.skor}</td>
-            <td>${new Date(jawaban.created_at).toLocaleString('id-ID', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'})}
-            </td>
-            <td style="text-align: center;">
-              <button onclick="openNilaiModal('${jawaban.id_jawaban}')" style="padding: 6px 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">Nilai</button>
-            </td>           
+        query = query.eq('id_tugas', tugasData.id_tugas);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Gagal mengambil data:', error);
+        tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Gagal memuat data.</td></tr>';
+        return;
+    }
+
+    // Simpan data yang sudah difilter
+    currentFilteredData = data;
+
+    // Bersihkan tabel sebelum menambahkan data baru
+    tableBody.innerHTML = '';
+    
+    if (data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Tidak ada data yang ditemukan.</td></tr>';
+        return;
+    }
+
+    // Membangun ulang tabel dengan data yang sudah difilter
+    data.forEach(jawaban => {
+        const row = document.createElement('tr');
+        const taskTitle = jawaban.tugas?.judul || 'Judul Tidak Ditemukan';
+        const studentAbsen = jawaban.user?.absen || '-';
+        const studentName = jawaban.user?.nama || 'Nama Tidak Ditemukan';
+        const studentInfo = `${jawaban.user?.kelas || ''} - ${jawaban.user?.jurusan || ''}`.trim();
+        const score = jawaban.skor !== null ? jawaban.skor : '-';
+        const formattedDate = new Date(jawaban.created_at).toLocaleString('id-ID', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+
+        // Cek jika data pengguna ada
+        if (jawaban.user) {
+            row.innerHTML = `
+                <td>${taskTitle}</td>
+                <td>${studentAbsen}</td>
+                <td>${studentName}</td>
+                <td>${studentInfo}</td>
+                <td><a href="${jawaban.file_url}" target="_blank">Lihat File</a></td>
+                <td>${score}</td>
+                <td>${formattedDate}</td>
+                <td style="text-align: center;">
+                    <button class="nilai-btn" data-id="${jawaban.id_jawaban}" data-skor="${jawaban.skor !== null ? jawaban.skor : ''}">Nilai</button>
+                </td>
+            `;
+        } else {
+            // Jika data pengguna tidak ada, tampilkan pesan yang sesuai
+            row.innerHTML = `
+                <td colspan="8" style="text-align: center; color: red;">Data pengguna tidak ditemukan.</td>
+            `;
+        }
+        tableBody.appendChild(row);
+    });
+
+    // Event listener untuk tombol "Nilai"
+    document.querySelectorAll('.nilai-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            selectedJawabanId = e.target.dataset.id;
+            const skor = e.target.dataset.skor;
+            document.querySelector('#nilaiForm input[name="skor"]').value = skor;
+            document.getElementById('nilaiModal').style.display = 'block';
+        });
+    });
+}
+
+        // Fungsi untuk memperbarui nama pengguna di header
+        async function updateUserName() {
+            const userNameElement = document.getElementById('userName');
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data, error } = await supabase.from('user').select('nama').eq('user_id', user.id).single();
+                if (data) {
+                    userNameElement.innerText = data.nama;
+                }
+            } else {
+                userNameElement.innerText = 'Pengguna';
+            }
+        }
+
+        // Fungsi untuk mengisi dropdown filter
+        async function populateFilters() {
+            const { data: userData, error: userError } = await supabase
+                .from('user')
+                .select('kelas, jurusan')
+                .order('kelas', { ascending: true })
+                .order('jurusan', { ascending: true });
+
+            if (userError) {
+                console.error('Gagal mengambil data user:', userError);
+                return;
+            }
+
+            const kelasSet = new Set(userData.map(item => item.kelas).filter(Boolean));
+            const kelasSelect = document.getElementById('filterKelas');
+            kelasSet.forEach(kelas => {
+                const option = document.createElement('option');
+                option.value = kelas;
+                option.textContent = kelas;
+                kelasSelect.appendChild(option);
+            });
+
+            const jurusanSet = new Set(userData.map(item => item.jurusan).filter(Boolean));
+            const jurusanSelect = document.getElementById('filterJurusan');
+            jurusanSet.forEach(jurusan => {
+                const option = document.createElement('option');
+                option.value = jurusan;
+                option.textContent = jurusan;
+                jurusanSelect.appendChild(option);
+            });
+
+            const { data: tugasData, error: tugasError } = await supabase
+                .from('tugas')
+                .select('judul')
+                .order('judul', { ascending: true });
+
+            if (tugasError) {
+                console.error('Gagal mengambil data tugas:', tugasError);
+                return;
+            }
+
+            const tugasSelect = document.getElementById('filterTugas');
+            tugasData.forEach(tugas => {
+                const option = document.createElement('option');
+                option.value = tugas.judul;
+                option.textContent = tugas.judul;
+                tugasSelect.appendChild(option);
+            });
+        }
+
+        // FUNGSI EKSPOR YANG DIREVISI MENGGUNAKAN DATA DIFILTER
+        async function exportToExcelXLSX() {
+            if (currentFilteredData.length === 0) {
+                alert('Tidak ada data yang difilter untuk diunduh. Silakan filter data terlebih dahulu.');
+                return;
+            }
+
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Data Jawaban Siswa');
             
-          `;
-          tableBody.appendChild(row);
-        });
-      }
-  
-      let selectedSkor = null;
+            // Mengambil nilai filter untuk judul laporan
+            const selectedKelas = document.getElementById('filterKelas').value;
+            const selectedJurusan = document.getElementById('filterJurusan').value;
+            const selectedTugas = document.getElementById('filterTugas').value;
+            const reportTitle = `Laporan Nilai Jawaban Siswa - ${selectedKelas || 'Semua Kelas'} / ${selectedJurusan || 'Semua Jurusan'} / ${selectedTugas || 'Semua Tugas'}`;
+            
+            worksheet.mergeCells('A1:G1');
+            worksheet.getCell('A1').value = reportTitle;
+            worksheet.getCell('A1').font = { size: 16, bold: true };
+            worksheet.getCell('A1').alignment = { horizontal: 'center' };
 
+            const headers = [
+                "No. Absen",
+                "Nama Siswa",
+                "Kelas",
+                "Jurusan",
+                "Judul Tugas",
+                "Nilai",
+                "Waktu Pengumpulan"
+            ];
+            worksheet.addRow([]);
+            const headerRow = worksheet.addRow(headers);
+            headerRow.font = { bold: true };
+            headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-      window.openNilaiModal = function(id_jawaban) {
-        selectedNilaiId = id_jawaban;
-      
-        const row = [...document.querySelectorAll('#jawabanTableBody tr')]
-          .find(r => r.querySelector(`button[onclick*="${id_jawaban}"]`));
-      
-        const skor = row ? row.children[2].innerText : '';
-        document.querySelector('#nilaiForm input[name="skor"]').value = skor;
-      
-        document.getElementById('nilaiModal').style.display = 'block';
-      }
-      
-      window.closeNilaiModal = function() {
-        document.getElementById('nilaiModal').style.display = 'none';
-        document.getElementById('nilaiForm').reset();
-        selectedNilaiId = null;
-      }
-  
-      document.addEventListener('DOMContentLoaded', () => {
-        loadAllJawaban();
-      
-        const nilaiForm = document.getElementById('nilaiForm');
-        nilaiForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const skorInput = nilaiForm.querySelector('input[name="skor"]');
-          const skor = parseInt(skorInput.value);
-      
-          if (isNaN(skor) || skor < 0) {
-            alert('Skor tidak valid.');
-            return;
-          }
-      
-          const { error } = await supabase
-            .from('jawaban')
-            .update({ skor })
-            .eq('id_jawaban', selectedNilaiId);
-      
-          if (error) {
-            alert('Gagal menyimpan nilai: ' + error.message);
-            return;
-          }
-      
-          alert('Nilai berhasil disimpan!');
-          closeNilaiModal();
-          loadAllJawaban();
+            // Mengisi data dari variabel global yang sudah difilter
+            currentFilteredData.forEach(jawaban => {
+                const studentAbsen = jawaban.user?.absen || '';
+                const studentName = jawaban.user?.nama || '';
+                const studentClass = jawaban.user?.kelas || '';
+                const studentMajor = jawaban.user?.jurusan || '';
+                const taskTitle = jawaban.tugas?.judul || '';
+                const score = jawaban.skor !== null ? jawaban.skor : '-';
+                const submissionDate = new Date(jawaban.created_at).toLocaleString('id-ID');
+
+                worksheet.addRow([
+                    studentAbsen,
+                    studentName,
+                    studentClass,
+                    studentMajor,
+                    taskTitle,
+                    score,
+                    submissionDate
+                ]);
+            });
+            
+            // Mengatur lebar kolom dan gaya
+            worksheet.columns = [
+                { width: 8 },
+                { width: 28 },
+                { width: 8 },
+                { width: 12 },
+                { width: 26 },
+                { width: 8 },
+                { width: 18 }
+            ];
+
+            worksheet.getColumn('A').alignment = { horizontal: 'center'};
+            worksheet.getColumn('C').alignment = { horizontal: 'center'};
+            worksheet.getColumn('D').alignment = { horizontal: 'center'};
+            worksheet.getColumn('F').alignment = { horizontal: 'center'};
+
+            worksheet.getCell('A3').alignment = { horizontal: 'center', wrapText: true };
+            worksheet.getCell('C3').alignment = { horizontal: 'center', vertical: 'middle'};
+            worksheet.getCell('D3').alignment = { horizontal: 'center', vertical: 'middle'};
+            worksheet.getCell('F3').alignment = { horizontal: 'center', vertical: 'middle'};
+            worksheet.getCell('G3').alignment = { horizontal: 'center', wrapText: true };
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            saveAs(new Blob([buffer]), 'data_jawaban.xlsx');
+        }
+
+        // EVENT LISTENER UTAMA YANG DIREVISI
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+                console.log('Login OK:', session.user.email);
+                await populateFilters();
+                loadAndFilterJawaban(); // Panggil fungsi ini untuk pertama kali
+                updateUserName();
+            } else {
+                supabase.auth.onAuthStateChange((event, session) => {
+                    if (!session) {
+                        window.location.href = 'login.html';
+                    }
+                });
+            }
+
+            // Tambahkan event listener untuk filter
+            document.getElementById('filterKelas').addEventListener('change', loadAndFilterJawaban);
+            document.getElementById('filterJurusan').addEventListener('change', loadAndFilterJawaban);
+            document.getElementById('filterTugas').addEventListener('change', loadAndFilterJawaban);
+
+            // Event listener untuk tombol logout dan modal penilaian (Tidak diubah)
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                    const { error } = await supabase.auth.signOut();
+                    if (error) {
+                        alert('Gagal logout: ' + error.message);
+                        return;
+                    }
+                    window.location.href = 'login.html';
+                });
+            }
+
+            const nilaiForm = document.getElementById('nilaiForm');
+            nilaiForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const skorInput = nilaiForm.querySelector('input[name="skor"]');
+                const skor = parseInt(skorInput.value);
+
+                if (isNaN(skor) || skor < 0 || skor > 100) {
+                    alert('Skor tidak valid. Mohon masukkan nilai antara 0-100.');
+                    return;
+                }
+
+                const { error } = await supabase
+                    .from('jawaban')
+                    .update({ skor: skor })
+                    .eq('id_jawaban', selectedJawabanId);
+
+                if (error) {
+                    alert('Gagal menyimpan nilai: ' + error.message);
+                    return;
+                }
+
+                alert('Nilai berhasil disimpan!');
+                closeNilaiModal();
+                loadAndFilterJawaban(); // Muat ulang data yang difilter
+            });
+
+            const modal = document.getElementById('nilaiModal');
+            const modalCloseBtn = document.querySelector('.close');
+            if (modalCloseBtn) {
+                modalCloseBtn.onclick = () => {
+                    closeNilaiModal();
+                };
+            }
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    closeNilaiModal();
+                }
+            };
+
+            const downloadExcelBtn = document.getElementById('downloadExcelBtn');
+            if (downloadExcelBtn) {
+                downloadExcelBtn.addEventListener('click', exportToExcelXLSX);
+            }
         });
-      });
-      
     </script>
 </head>
 
 <body>
+    <header class="header">
+        <section class="flex">
+            <a href="admin.html" class="logo">EduWeb</a>
+            <div class="icons">
+                <div id="menu-btn" class="fas fa-bars"></div>
+                <div id="user-btn" class="fas fa-user"></div>
+                <div id="toggle-btn" class="fas fa-sun"></div>
+            </div>
+            <div class="profile">
+                <p class="role">Halo</p>
+                <h3 class="name" id="userName"></h3>
+                <p><span id="role"></span></p>
+                <a id="logoutBtn" class="delete-btn">Keluar</a>
+            </div>
+        </section>
+    </header>
 
-   <header class="header">
-   
-      <section class="flex">
-   
-         <a href="admin.html" class="logo">EduWeb</a>
-   
-         <div class="icons">
-            <div id="menu-btn" class="fas fa-bars"></div>
-            <div id="user-btn" class="fas fa-user"></div>
-            <div id="toggle-btn" class="fas fa-sun"></div>
-         </div>
-   
-         <div class="profile">
-            <p class="role">Halo<p>
-            <h3 class="name" id="userName"></h3>
-            <p><span id="role"></span>
-               <a id="logoutBtn" class="delete-btn">Keluar</a>
-         </div>
-   
-      </section>
-   
-   </header>
-   
-   <div class="side-bar">
-   
-      <div id="close-btn">
-         <i class="fas fa-times"></i>
-      </div>
-   
-      <div class="profile">
-         <img src="images/pic-1.jpg" class="image" alt="">
-         <h3 class="role">Eduweb</h3>
-         <h2 class="name">Daftar Menu</h2>
-      </div>
-   
-      <nav class="navbar">
-        <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
-        <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
-        <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
-        <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
-        <a href="admin-courses3.html"><i class="fas fa-list"></i><span>Data Jawaban</span></a>
-        <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
-     </nav>
-   
-   </div>   
-     <div>
-      
-      <div id="nilaiModal" class="modal">
-        <div class="modal-content">
-           <span onclick="closeNilaiModal()" style="cursor:pointer;float:right;">&times;</span>
-           <h3>Tambahkan Nilai</h3>
-           <form id="nilaiForm">
-              <input type="number" name="skor" placeholder="Nilai" required>
-              <button type="submit">Simpan</button>
-           </form>
+    <div class="side-bar">
+        <div id="close-btn">
+            <i class="fas fa-times"></i>
         </div>
-     </div>
-      
-      <script>
-          const modal = document.getElementById("nilaiModal");
-          const btn = document.getElementById("openModalBtn");
-          const span = document.querySelector(".close");
-     
-          btn.onclick = function() {
-            modal.style.display = "block";
-            document.getElementById("nilaiModalTitle").innerText = "Tambah nilai";
-            editingNilaiId = null;
-            currentFileUrl = null;
-            tugasForm.reset();
-          
-            fileInput.required = true;             // wajibkan lagi
-            fileInput.value = '';                  // bersihkan jika sebelumnya ada sisa file
-          }
+        <div class="profile">
+            <img src="images/pic-1.jpg" class="image" alt="">
+            <h3 class="role">Eduweb</h3>
+            <h2 class="name">Daftar Menu</h2>
+        </div>
+        <nav class="navbar">
+            <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
+            <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
+            <a href="admin-playlist.html"><i class="fas fa-play-circle"></i><span>Data Video</span></a>
+            <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
+            <a href="admin-courses3.html"><i class="fas fa-list"></i><span>Data Jawaban</span></a>
+            <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
+        </nav>
+    </div>
+
+    <div id="nilaiModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Tambahkan Nilai</h3>
+            <form id="nilaiForm">
+                <input type="number" name="skor" placeholder="Masukkan Nilai (0-100)" min="0" max="100" required>
+                <button type="submit">Simpan</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 text-left">
+            <button id="downloadExcelBtn" class="btn btn-primary">Unduh Excel</button>
+        </div>
+    </div>
+
+    <div class="filter-controls">
+        <label for="filterKelas">Filter Kelas:</label>
+        <select id="filterKelas">
+            <option value="">Semua Kelas</option>
+        </select>
         
-          span.onclick = function() {
-            modal.style.display = "none";
-          }
+        <label for="filterJurusan">Filter Jurusan:</label>
+        <select id="filterJurusan">
+            <option value="">Semua Jurusan</option>
+        </select>
+        
+        <label for="filterTugas">Filter Tugas:</label>
+        <select id="filterTugas">
+            <option value="">Semua Tugas</option>
+        </select>
+    </div>
 
-          window.onclick = function(event) {
-            if (event.target === modal) {
-              modal.style.display = "none";
-            }
-          }
-        </script>
-     </div>
-   
-     <table>
-       <thead>
-         <tr>
-           <th>Dibuat Oleh</th>
-           <th>File path</th>
-           <th>Skor</th>
-           <th>Dibuat pada</th>
-           <th>Aksi</th>
-         </tr>
-       </thead>
-       <tbody id="jawabanTableBody">
-         <!-- Data user akan dimuat di sini -->
-       </tbody>
-     </table>
-
-<!-- custom js file link  -->
-<script src="js/script.js"></script>
+    <table>
+        <thead>
+            <tr>
+                <th>Judul Tugas</th>
+                <th>No. Absen</th>
+                <th>Nama Siswa</th>
+                <th>Kelas & Jurusan</th>
+                <th>File Jawaban</th>
+                <th>Skor</th>
+                <th>Waktu Pengumpulan</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="jawabanTableBody">
+        </tbody>
+    </table>
+    
+    <script src="js/script.js"></script>
 
 </body>
 </html>

@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Data User</title>
-   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
-   <link rel="stylesheet" href="css/style.css">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data User</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
 
-   <script type="module">
+    <script type="module">
       import { createClient } from 'https://esm.sh/@supabase/supabase-js'
   
       const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
@@ -19,12 +19,12 @@
         const { data: { session } } = await supabase.auth.getSession()
   
         if (session) {
-         console.log('Login OK:', session.user.email)
-       } else {
-         supabase.auth.onAuthStateChange((event, session) => {
-           if (!session) {
-             window.location.href = 'login.html'
-           }
+          console.log('Login OK:', session.user.email)
+        } else {
+          supabase.auth.onAuthStateChange((event, session) => {
+            if (!session) {
+              window.location.href = 'login.html'
+            }
           })
         }
       })
@@ -32,66 +32,68 @@
       const logoutBtn = document.getElementById('logoutBtn')
       
       logoutBtn.addEventListener('click', async () => {
-         const { error } = await supabase.auth.signOut()
-         if (error) {
+          const { error } = await supabase.auth.signOut()
+          if (error) {
             alert('Gagal logout: ' + error.message)
             return
-         }
-         localStorage.clear()
-         window.location.href = 'login.html'
+          }
+          localStorage.clear()
+          window.location.href = 'login.html'
       })
       document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
 
       async function loadAllUsers() {
-         const { data, error } = await supabase
-           .from('user')
-           .select('*')
-           .eq ('role','Siswa')
-   
-         if (error) {
-           console.error('Error load data:', error)
-           return
-         }
-   
-         const tableBody = document.getElementById('userTableBody')
-         tableBody.innerHTML = ''
-   
-         data.forEach(user => {
-           const row = document.createElement('tr')
-           row.innerHTML = `
-           <td>${user.nama}</td> 
-           <td>${user.email}</td>
-           <td>${user.role}</td>              
-           <td>
-            <button onclick="editUser('${user.user_id}')">Edit</button>
-            <button onclick="deleteUser('${user.user_id}')">Hapus</button>
-          </td>
-           `
-           tableBody.appendChild(row)
-         })
-       }
+          const { data, error } = await supabase
+            .from('user')
+            .select('*')
+            .eq ('role','Siswa')
+    
+          if (error) {
+            console.error('Error load data:', error)
+            return
+          }
+    
+          const tableBody = document.getElementById('userTableBody')
+          tableBody.innerHTML = ''
+    
+          data.forEach(user => {
+            const row = document.createElement('tr')
+            row.innerHTML = `
+            <td>${user.nama}</td> 
+            <td>${user.email}</td>
+            <td>${user.role}</td> 
+            <td>${user.kelas || '-'}</td>
+            <td>${user.jurusan || '-'}</td>
+            <td>
+              <button onclick="editUser('${user.user_id}')">Edit</button>
+              <button onclick="deleteUser('${user.user_id}')">Hapus</button>
+            </td>
+            `
+            tableBody.appendChild(row)
+          })
+      }
 
-       loadAllUsers()
+      loadAllUsers()
 
-       let editingUserId = null
+      let editingUserId = null
 
-       // Fungsi hapus user
-        window.deleteUser = async function(id) {
+      // Fungsi hapus user
+      window.deleteUser = async function(id) {
         const { error } = await supabase
-       .from('user')
-       .delete()
-       .eq('user_id', id)
+        .from('user')
+        .delete()
+        .eq('user_id', id)
 
         if (error) {
-        alert('Gagal menghapus user: ' + error.message)
-        return
+          alert('Gagal menghapus user: ' + error.message)
+          return
         }
 
         alert('User berhasil dihapus!')
         await loadAllUsers()
-        }
+      }
 
-        window.editUser = async function(id) {
+      window.editUser = async function(id) {
         const { data, error } = await supabase
         .from('user')
         .select('*')
@@ -99,22 +101,25 @@
         .single()
 
         if (error) {
-        alert('Gagal mengambil data user: ' + error.message)
-        return
+          alert('Gagal mengambil data user: ' + error.message)
+          return
         }
 
-      document.querySelector('#userForm [name="nama"]').value = data.nama
-      document.querySelector('#userForm [name="email"]').value = data.email
-      document.querySelector('#userForm [name="role"]').value = data.role
+        // Mengisi form dengan data dari Supabase
+        document.querySelector('#userForm [name="nama"]').value = data.nama
+        document.querySelector('#userForm [name="email"]').value = data.email
+        document.querySelector('#userForm [name="role"]').value = data.role
+        document.querySelector('#userForm [name="kelas"]').value = data.kelas || ''
+        document.querySelector('#userForm [name="jurusan"]').value = data.jurusan || ''
 
-      document.getElementById("userModalTitle").innerText = "Edit User"
-      editingUserId = id
-      modal.style.display = "block"
+        document.getElementById("userModalTitle").innerText = "Edit User"
+        editingUserId = id
+        modal.style.display = "block"
       }
 
-        const userForm = document.getElementById('userForm')
-        
-        userForm.addEventListener('submit', async function(e) {
+      const userForm = document.getElementById('userForm')
+      
+      userForm.addEventListener('submit', async function(e) {
         e.preventDefault()
         
         const formData = new FormData(userForm)
@@ -123,75 +128,75 @@
         let error
 
         if (editingUserId) {
-        // Mode edit
-        const res = await supabase
-        .from('user')
-        .update(userData)
-        .eq('user_id', editingUserId)
+          // Mode edit
+          const res = await supabase
+          .from('user')
+          .update(userData)
+          .eq('user_id', editingUserId)
 
-        error = res.error
-        editingUserId = null  // Reset setelah selesai edit
+          error = res.error
+          editingUserId = null  // Reset setelah selesai edit
         } else {
-        // Mode tambah
-        const res = await supabase
-        .from('user')
-        .insert([userData])
+          // Mode tambah
+          const res = await supabase
+          .from('user')
+          .insert([userData])
 
-        error = res.error
+          error = res.error
         }
 
         if (error) {
-        alert('Gagal menyimpan user: ' + error.message)
-        return
+          alert('Gagal menyimpan user: ' + error.message)
+          return
         }
 
         alert('User berhasil disimpan!')
         modal.style.display = "none"
         await loadAllUsers()
         userForm.reset()
-        })
+      })
 
     </script>
 
 </head>
 <body>
 
-   <header class="header">
-   
+    <header class="header">
+    
       <section class="flex">
-   
-         <a href="admin.html" class="logo">EduWeb</a>
-   
-         <div class="icons">
+    
+          <a href="admin.html" class="logo">EduWeb</a>
+    
+          <div class="icons">
             <div id="menu-btn" class="fas fa-bars"></div>
             <div id="user-btn" class="fas fa-user"></div>
             <div id="toggle-btn" class="fas fa-sun"></div>
-         </div>
-   
-         <div class="profile">
+          </div>
+    
+          <div class="profile">
             <p class="role">Halo<p>
             <h3 class="name" id="userName"></h3>
             <p><span id="role"></span>
-               <a id="logoutBtn" class="delete-btn">Keluar</a>
-         </div>
-   
+                <a id="logoutBtn" class="delete-btn">Keluar</a>
+          </div>
+    
       </section>
-   
-   </header>
-   
-   <div class="side-bar">
-   
+    
+    </header>
+    
+    <div class="side-bar">
+    
       <div id="close-btn">
-         <i class="fas fa-times"></i>
+          <i class="fas fa-times"></i>
       </div>
-   
+    
       <div class="profile">
-         <img src="images/pic-1.jpg" class="image" alt="">
-         <h3 class="role">Eduweb</h3>
-   
-         <h2 class="name">Daftar Menu</h2>
+          <img src="images/pic-1.jpg" class="image" alt="">
+          <h3 class="role">Eduweb</h3>
+    
+          <h2 class="name">Daftar Menu</h2>
       </div>
-   
+    
       <nav class="navbar">
         <a href="admin.html"><i class="fas fa-home"></i><span>Beranda</span></a>
         <a href="admin-courses.html"><i class="fas fa-book"></i><span>Data Materi</span></a>
@@ -199,10 +204,10 @@
         <a href="admin-courses2.html"><i class="fas fa-edit"></i><span>Data Tugas</span></a>
         <a href="admin-courses3.html"><i class="fas fa-list"></i><span>Data Jawaban</span></a>
         <a href="admin-user.html"><i class="fas fa-user"></i><span>Data Siswa</span></a>
-     </nav>
-   
-   </div>   
-     <div>
+       </nav>
+    
+    </div> 
+      <div>
       <button id="openModalBtn">Tambah +</button>
       <div id="userModal" class="modal">
         <div class="modal-content">
@@ -215,6 +220,18 @@
               <option value="">Pilih Role</option>
               <option value="Siswa">Siswa</option>
               <option value="Guru">Guru</option>
+            </select>
+            <select name="kelas">
+                <option value="">Pilih Kelas</option>
+                <option value="X">X</option>
+                <option value="XI">XI</option>
+                <option value="XII">XII</option>
+            </select>
+            <select name="jurusan">
+                <option value="">Pilih Jurusan</option>
+                <option value="RPL">RPL</option>
+                <option value="Tata Rias">Tata Rias</option>
+                <option value="Tata Boga">Tata Boga</option>
             </select>
             <button type="submit">Simpan</button>
           </form>
@@ -244,23 +261,25 @@
               editingUserId = null
             }
           }
-        </script>
-     </div>
-   
-     <table>
-       <thead>
-         <tr>
-           <th>Nama</th>
-           <th>Email</th>
-           <th>Role</th>
-           <th>Aksi</th>
-         </tr>
-       </thead>
-       <tbody id="userTableBody">
-       </tbody>
-     </table>
+      </script>
+      </div>
+    
+      <table>
+        <thead>
+          <tr>
+            <th>Nama</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Kelas</th>
+            <th>Jurusan</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody">
+        </tbody>
+      </table>
 
 <script src="js/script.js"></script>
-   
+    
 </body>
 </html>
