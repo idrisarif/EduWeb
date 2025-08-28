@@ -9,38 +9,11 @@
     <link rel="stylesheet" href="css/style.css">
 
     <script type="module">
-      import { createClient } from 'https://esm.sh/@supabase/supabase-js'
-  
-      const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
-      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
-      const supabase = createClient(supabaseUrl, supabaseKey)
+      import { createClient } from 'https://esm.sh/@supabase/supabase-js';
 
-      window.addEventListener('DOMContentLoaded', async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-  
-        if (session) {
-          console.log('Login OK:', session.user.email)
-        } else {
-          supabase.auth.onAuthStateChange((event, session) => {
-            if (!session) {
-              window.location.href = 'login.html'
-            }
-          })
-        }
-      })
-
-      const logoutBtn = document.getElementById('logoutBtn')
-      
-      logoutBtn.addEventListener('click', async () => {
-          const { error } = await supabase.auth.signOut()
-          if (error) {
-            alert('Gagal logout: ' + error.message)
-            return
-          }
-          localStorage.clear()
-          window.location.href = 'login.html'
-      })
-      document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
+        const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg';
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
       async function loadAllUsers() {
           const { data, error } = await supabase
@@ -156,6 +129,29 @@
         userForm.reset()
       })
 
+      const modal = document.getElementById("userModal");
+          const btn = document.getElementById("openModalBtn");
+          const span = document.querySelector(".close");
+        
+          btn.onclick = function() {
+            document.getElementById("userModalTitle").innerText = "Tambah User";
+            editingUserId = null;
+            userForm.reset();
+            modal.style.display = "block";
+          }
+        
+          span.onclick = function() {
+            modal.style.display = "none";
+            editingUserId = null
+          }
+
+          window.onclick = function(event) {
+            if (event.target === modal) {
+              modal.style.display = "none";
+              editingUserId = null
+            }
+          }
+
     </script>
 
 </head>
@@ -237,32 +233,6 @@
           </form>
         </div>
       </div>
-      
-      <script>
-          const modal = document.getElementById("userModal");
-          const btn = document.getElementById("openModalBtn");
-          const span = document.querySelector(".close");
-        
-          btn.onclick = function() {
-            document.getElementById("userModalTitle").innerText = "Tambah User";
-            editingUserId = null;
-            userForm.reset();
-            modal.style.display = "block";
-          }
-        
-          span.onclick = function() {
-            modal.style.display = "none";
-            editingUserId = null
-          }
-
-          window.onclick = function(event) {
-            if (event.target === modal) {
-              modal.style.display = "none";
-              editingUserId = null
-            }
-          }
-      </script>
-      </div>
     
       <table>
         <thead>
@@ -279,7 +249,7 @@
         </tbody>
       </table>
 
-<script src="js/script.js"></script>
+<script src="js/script.js" type="module"></script>
     
 </body>
 </html>

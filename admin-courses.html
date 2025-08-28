@@ -19,48 +19,6 @@
         let currentFileUrl = null;
         let currentThumbnailUrl = null;
 
-        window.addEventListener('DOMContentLoaded', async () => {
-            const { data: { session } } = await supabase.auth.getSession()
-
-            if (session) {
-                console.log('Login OK:', session.user.email)
-                loadAllMateri()
-                updateUserName()
-            } else {
-                supabase.auth.onAuthStateChange((event, session) => {
-                    if (!session) {
-                        window.location.href = 'login.html'
-                    }
-                })
-            }
-        })
-        
-        async function updateUserName() {
-            const userNameElement = document.getElementById('userName');
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data, error } = await supabase.from('user').select('nama').eq('user_id', user.id).single();
-                if (data) {
-                    userNameElement.innerText = data.nama;
-                }
-            } else {
-                userNameElement.innerText = 'Pengguna';
-            }
-        }
-
-        const logoutBtn = document.getElementById('logoutBtn')
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', async () => {
-                const { error } = await supabase.auth.signOut()
-                if (error) {
-                    alert('Gagal logout: ' + error.message)
-                    return
-                }
-                localStorage.clear()
-                window.location.href = 'login.html'
-            })
-        }
-
         async function loadAllMateri() {
             const { data, error } = await supabase
                 .from('materi')
@@ -406,7 +364,7 @@
             </tbody>
     </table>
 
-    <script src="js/script.js"></script>
+    <script src="js/script.js" type="module"></script>
 
 </body>
 </html>

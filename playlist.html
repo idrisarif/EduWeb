@@ -7,73 +7,6 @@
     <title>Daftar Video</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
-
-    <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    
-        const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co'
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg'
-        const supabase = createClient(supabaseUrl, supabaseKey)
-    
-        window.addEventListener('DOMContentLoaded', async () => {
-            const { data: { session } } = await supabase.auth.getSession()
-            if (session) {
-                console.log('Login OK:', session.user.email)
-                document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
-                loadVideos();
-            } else {
-                window.location.href = 'login.html'
-            }
-        });
-
-        const logoutBtn = document.getElementById('logoutBtn')
-        logoutBtn.addEventListener('click', async () => {
-            const { error } = await supabase.auth.signOut()
-            if (error) {
-                alert('Gagal logout: ' + error.message)
-                return
-            }
-            localStorage.clear()
-            window.location.href = 'login.html'
-        })
-        
-        async function loadVideos() {
-            const { data, error } = await supabase
-                .from('video')
-                .select('id_video, judul, thumbnail_url, file_url, sumber');
-
-            if (error) {
-                console.error('Gagal mengambil data video:', error);
-                return;
-            }
-
-            const boxContainer = document.querySelector('.box-container');
-            boxContainer.innerHTML = '';
-
-            data.forEach(video => {
-                let videoUrl;
-                if (video.sumber === 'YouTube') {
-                    videoUrl = `watch-video.html?id=${video.file_url}&sumber=youtube`;
-                } else {
-                    videoUrl = `watch-video.html?id=${video.id_video}&sumber=internal`;
-                }
-                
-                const box = document.createElement('a');
-                box.classList.add('box');
-                box.href = videoUrl;
-
-                const videoTitle = video.judul;
-                const thumbnailUrl = video.thumbnail_url || 'images/post-1-1.png';
-                
-                box.innerHTML = `
-                    <i class="fas fa-play"></i>
-                    <img src="${thumbnailUrl}" alt="">
-                    <h3>${videoTitle}</h3>
-                `;
-                boxContainer.appendChild(box);
-            });
-        }
-    </script>
 </head>
 <body>
 
@@ -117,6 +50,8 @@
         </div>
     </section>
 
-    <script src="js/script.js"></script>
+    <script src="js/script.js" type="module"></script>
+    <script src="js/playlist.js" type="module"></script>
+
 </body>
 </html>
