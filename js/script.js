@@ -124,4 +124,5 @@ document.addEventListener('DOMContentLoaded', () => {
         checkAuthAndRedirect();
         updateUserName();
     }
+
 });

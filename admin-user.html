@@ -15,6 +15,17 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg';
         const supabase = createClient(supabaseUrl, supabaseKey);
 
+        window.addEventListener('DOMContentLoaded', async () => {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session) {
+              console.log('Login OK:', session.user.email)
+              document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
+              loadAllVideo()
+          } else {
+              window.location.href = 'login.html'
+          }
+      })
+
       async function loadAllUsers() {
           const { data, error } = await supabase
             .from('user')
@@ -98,8 +109,14 @@
         const formData = new FormData(userForm)
         const userData = Object.fromEntries(formData.entries())
 
-        let error
+        const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                alert('Silakan login kembali.');
+                window.location.href = 'login.html';
+                return;
+            }
 
+        let error
         if (editingUserId) {
           // Mode edit
           const res = await supabase

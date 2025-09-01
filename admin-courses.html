@@ -19,6 +19,17 @@
         let currentFileUrl = null;
         let currentThumbnailUrl = null;
 
+        window.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session) {
+                console.log('Login OK:', session.user.email)
+                document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
+                loadAllVideo()
+            } else {
+                window.location.href = 'login.html'
+            }
+        })
+
         async function loadAllMateri() {
             const { data, error } = await supabase
                 .from('materi')
@@ -242,7 +253,12 @@
                 thumbnailUrl = publicData.publicUrl;
             }
 
-            const { data: { user } } = await supabase.auth.getUser()
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                alert('Silakan login kembali.');
+                window.location.href = 'login.html';
+                return;
+            }
 
             let error;
             if (editingMateriId) {
