@@ -7,6 +7,26 @@
     <title>Tugas</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js';
+  
+          const supabaseUrl = 'https://kwahwerhxkqpnhxllavm.supabase.co';
+          const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3YWh3ZXJoeGtxcG5oeGxsYXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxODQ4OTUsImV4cCI6MjA2Mjc2MDg5NX0.8-HqAo5AEK5nPU86mTAme8SQv-egMYPDy39wJ-3bEwg';
+          const supabase = createClient(supabaseUrl, supabaseKey);
+  
+          window.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session) {
+                console.log('Login OK:', session.user.email)
+                document.getElementById('userName').innerText = localStorage.getItem('nama') || 'Pengguna'
+                loadAllVideo()
+            } else {
+                window.location.href = 'login.html'
+            }
+        })
+     </script>
+
 </head>
 
 <body>
