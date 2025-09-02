@@ -54,12 +54,12 @@
             data.forEach(materi => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${materi.judul}</td>
-                    <td>${materi.deskripsi}</td>
-                    <td><a href="${materi.file_url}" target="_blank">Lihat File</a></td>
-                    <td><img src="${materi.thumbnail_url || 'https://via.placeholder.com/50'}" alt="Thumbnail" width="50"></td>
-                    <td>${materi.user?.nama || 'Tidak diketahui'}</td>
-                    <td>
+                    <td data-label="Judul:">${materi.judul}</td>
+                    <td data-label="Deskripsi:">${materi.deskripsi}</td>
+                    <td data-label="File:"><a href="${materi.file_url}" target="_blank">Lihat File</a></td>
+                    <td data-label="Thumbnail:"><img src="${materi.thumbnail_url || 'https://via.placeholder.com/50'}" alt="Thumbnail" width="50"></td>
+                    <td data-label="Dibuat oleh:">${materi.user?.nama || 'Tidak diketahui'}</td>
+                    <td data-label="Aksi:">
                         <button onclick="editMateri('${materi.id_materi}', '${materi.created_by}')">Edit</button>
                         <button onclick="deleteMateri('${materi.id_materi}', '${materi.created_by}')">Hapus</button>
                     </td>

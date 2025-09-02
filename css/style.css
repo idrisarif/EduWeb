@@ -1520,84 +1520,75 @@ section{
  }
  
  @media (max-width: 768px) {
+   /* Mengubah tabel menjadi layout block */
    table, thead, tbody, th, td, tr {
-     display: block;
+       display: block;
    }
- 
+   
+   /* Sembunyikan header tabel di mobile */
    table thead {
-     display: none;
+       display: none;
    }
- 
+   
+   /* Menambahkan margin untuk memisahkan setiap baris data */
    table tr {
-     margin-bottom: 1rem;
+       margin-bottom: 1rem;
+       border: 1px solid #dee2e6; /* Border untuk setiap 'kartu' data */
+       border-radius: 8px;
+       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+       padding: 1rem;
    }
- 
+   
+   /* Menyesuaikan sel data agar label dan isinya berdampingan */
    table td {
-     position: relative;
-     padding-left: 50%;
+       position: relative;
+       padding-left: 50%;
+       text-align: left; /* Teks rata kiri */
+       border: none; /* Hilangkan border antar sel */
    }
- 
+   
+   /* Menambahkan label menggunakan atribut data-label dari HTML */
    table td::before {
-     position: absolute;
-     top: 0;
-     left: 0;
-     width:45%;
-     padding-left: 1rem;
-     font-weight: bold;
-     white-space: nowrap;
+       content: attr(data-label);
+       position: absolute;
+       top: 0;
+       left: 0;
+       width: 45%;
+       padding: 0.75rem 0.5rem 0.75rem 1rem;
+       font-weight: bold;
+       white-space: nowrap;
+       color: #555;
    }
- 
-   table td:nth-child(1)::before { content: "Nama"; }
-   table td:nth-child(2)::before { content: "Email"; }
-   table td:nth-child(3)::before { content: "Role"; }
-   table td:nth-child(4)::before { content: "Aksi"; }
- }
- 
- table.jawaban-table th:nth-child(1),
- table.jawaban-table td:nth-child(1) {
-   width: 25%; /* Dibuat Oleh */
- }
- 
- table.jawaban-table th:nth-child(2),
- table.jawaban-table td:nth-child(2) {
-   width: 30%; /* File Path */
- }
- 
- table.jawaban-table th:nth-child(3),
- table.jawaban-table td:nth-child(3) {
-   width: 10%; /* Skor */
- }
- 
- table.jawaban-table th:nth-child(4),
- table.jawaban-table td:nth-child(4) {
-   width: 20%; /* Dibuat Pada */
- }
- 
- table.jawaban-table th:nth-child(5),
- table.jawaban-table td:nth-child(5) {
-   width: 15%; /* Aksi */
- }
- 
- /* Tabel Materi (contoh layout berbeda) */
- table.materi-table th:nth-child(1),
- table.materi-table td:nth-child(1) {
-   width: 40%; /* Judul Materi */
- }
- 
- table.materi-table th:nth-child(2),
- table.materi-table td:nth-child(2) {
-   width: 30%; /* Deskripsi */
- }
- 
- table.materi-table th:nth-child(3),
- table.materi-table td:nth-child(3) {
-   width: 20%; /* Tanggal */
- }
- 
- table.materi-table th:nth-child(4),
- table.materi-table td:nth-child(4) {
-   width: 10%; /* Aksi */
- }
+  
+   /* Atur ulang padding pada sel aksi agar tombol rata kiri */
+   table td[data-label="Aksi:"] {
+      padding-left: 1rem; /* Ubah padding agar rata kiri */
+   }
+  
+   /* Sembunyikan label pseudo-element untuk sel aksi */
+   table td[data-label="Aksi:"]::before {
+      display: none; /* Hilangkan label "Aksi:" */
+   }
+  
+   /* Perbaiki tata letak tombol di dalam sel aksi */
+   .table-actions {
+      display: flex;
+      justify-content: flex-start; /* Ratakan tombol ke kiri */
+      gap: 10px; /* Tambahkan jarak antar tombol */
+      }
+
+   body.dark table {
+      background-color: #1e1e1e;
+      color: #f0f0f0;
+      box-shadow: none; /* Opsional: hilangkan bayangan untuk tampilan yang lebih datar */
+     }
+      
+   body.dark th, 
+   body.dark td {
+      border: none; /* Kunci perubahannya: hapus border pada sel header dan data */
+     }
+  
+}
  
  button,
  input[type="submit"] {

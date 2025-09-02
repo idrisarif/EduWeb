@@ -72,12 +72,12 @@
                 const thumbnailUrl = video.thumbnail_url || 'https://via.placeholder.com/50';
 
                 row.innerHTML = `
-                    <td>${video.judul}</td>
-                    <td>${video.deskripsi}</td>
-                    <td><img src="${thumbnailUrl}" alt="Thumbnail" style="width: 50px; height: auto;"></td>
-                    <td><a href="${fileLink}" target="_blank">${fileLinkText}</a></td>
-                    <td>${video.user?.nama || 'Tidak diketahui'}</td>
-                    <td>
+                    <td data-label="Judul:">${video.judul}</td>
+                    <td data-label="Deskripsi:">${video.deskripsi}</td>
+                    <td data-label="Thumbnail:"><img src="${thumbnailUrl}" alt="Thumbnail" style="width: 50px; height: auto;"></td>
+                    <td data-label="File/Link:"><a href="${fileLink}" target="_blank">${fileLinkText}</a></td>
+                    <td data-label="Dibuat oleh:">${video.user?.nama || 'Tidak diketahui'}</td>
+                    <td data-label="Aksi:">
                         <button onclick="editVideo('${video.id_video}', '${video.created_by}')">Edit</button>
                         <button onclick="deleteVideo('${video.id_video}', '${video.created_by}')">Hapus</button>
                     </td>

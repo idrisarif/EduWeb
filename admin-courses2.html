@@ -98,12 +98,12 @@
                 }
 
                 row.innerHTML = `
-                    <td>${tugas.judul}</td>
-                    <td>${tugas.deskripsi}</td>
-                    <td><a href="${tugas.file_url}" target="_blank">Lihat File</a></td>
-                    <td>${tugas.user?.nama || 'Tidak diketahui'}</td>
-                    <td>${formatDate(tugas.created_at)}</td>
-                    <td>
+                    <td data-label="Judul:">${tugas.judul}</td>
+                    <td data-label="Deskripsi:">${tugas.deskripsi}</td>
+                    <td data-label="File:"><a href="${tugas.file_url}" target="_blank">Lihat File</a></td>
+                    <td data-label="Dibuat oleh:">${tugas.user?.nama || 'Tidak diketahui'}</td>
+                    <td data-label="Dibuat pada:">${formatDate(tugas.created_at)}</td>
+                    <td data-label="Aksi:">
                       <button onclick="editTugas('${tugas.id_tugas}')">Edit</button>
                       <button onclick="deleteTugas('${tugas.id_tugas}')">Hapus</button>
                     </td>

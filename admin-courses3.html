@@ -29,116 +29,113 @@
         }
 
         // FUNGSI UTAMA YANG DIREVISI TOTAL
-async function loadAndFilterJawaban() {
-    const tableBody = document.getElementById('jawabanTableBody');
-    tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Memuat data...</td></tr>';
+        async function loadAndFilterJawaban(sortBy = 'created_at', sortOrder = 'desc') {
+            const tableBody = document.getElementById('jawabanTableBody');
+            tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Memuat data...</td></tr>';
 
-    const selectedKelas = document.getElementById('filterKelas').value;
-    const selectedJurusan = document.getElementById('filterJurusan').value;
-    const selectedTugas = document.getElementById('filterTugas').value;
+            const selectedKelas = document.getElementById('filterKelas').value;
+            const selectedJurusan = document.getElementById('filterJurusan').value;
+            const selectedTugas = document.getElementById('filterTugas').value;
 
-    let query = supabase.from('jawaban').select(`
-        id_jawaban,
-        file_url,
-        created_at,
-        skor,
-        user:created_by(nama, absen, kelas, jurusan),
-        tugas:id_tugas(judul, id_tugas)
-    `);
+            let query = supabase.from('jawaban').select(`
+                id_jawaban,
+                file_url,
+                created_at,
+                skor,
+                user:created_by(nama, absen, kelas, jurusan),
+                tugas:id_tugas(judul, id_tugas)
+            `);
 
-    // Tambahkan kondisi filter secara dinamis
-    if (selectedKelas) {
-        query = query.filter('user.kelas', 'eq', selectedKelas);
-    }
-    if (selectedJurusan) {
-        query = query.filter('user.jurusan', 'eq', selectedJurusan);
-    }
-    if (selectedTugas) {
-        // Ini adalah poin kritis. Supabase tidak bisa memfilter `tugas.judul`
-        // pada select join. Solusinya adalah mencari ID tugas terlebih dahulu.
-        const { data: tugasData, error: tugasError } = await supabase
-            .from('tugas')
-            .select('id_tugas')
-            .eq('judul', selectedTugas)
-            .single();
+            // Tambahkan kondisi filter secara dinamis
+            if (selectedKelas) {
+                query = query.filter('user.kelas', 'eq', selectedKelas);
+            }
+            if (selectedJurusan) {
+                query = query.filter('user.jurusan', 'eq', selectedJurusan);
+            }
+            if (selectedTugas) {
+                const { data: tugasData, error: tugasError } = await supabase
+                    .from('tugas')
+                    .select('id_tugas')
+                    .eq('judul', selectedTugas)
+                    .single();
 
-        if (tugasError || !tugasData) {
-            console.error('Tugas tidak ditemukan atau gagal mengambil ID:', tugasError);
-            tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Tugas tidak ditemukan.</td></tr>';
-            return;
+                if (tugasError || !tugasData) {
+                    console.error('Tugas tidak ditemukan atau gagal mengambil ID:', tugasError);
+                    tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Tugas tidak ditemukan.</td></tr>';
+                    return;
+                }
+                query = query.eq('id_tugas', tugasData.id_tugas);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('Gagal mengambil data:', error);
+                tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Gagal memuat data.</td></tr>';
+                return;
+            }
+
+            const filteredData = data.filter(jawaban => jawaban.user);
+
+            // Logika Pengurutan di Sisi Klien
+            filteredData.sort((a, b) => {
+                if (sortBy === 'absen') {
+                    const absenA = a.user?.absen || Infinity;
+                    const absenB = b.user?.absen || Infinity;
+                    return sortOrder === 'asc' ? absenA - absenB : absenB - absenA;
+                } else { // Default: 'created_at'
+                    const dateA = new Date(a.created_at);
+                    const dateB = new Date(b.created_at);
+                    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+                }
+            });
+
+            currentFilteredData = filteredData;
+
+            tableBody.innerHTML = '';
+            
+            if (filteredData.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Tidak ada data yang ditemukan.</td></tr>';
+                return;
+            }
+
+            filteredData.forEach(jawaban => {
+                const row = document.createElement('tr');
+                const taskTitle = jawaban.tugas?.judul || 'Judul Tidak Ditemukan';
+                const studentAbsen = jawaban.user?.absen || '-';
+                const studentName = jawaban.user?.nama || 'Nama Tidak Ditemukan';
+                const studentInfo = `${jawaban.user?.kelas || ''} - ${jawaban.user?.jurusan || ''}`.trim();
+                const score = jawaban.skor !== null ? jawaban.skor : '-';
+                const formattedDate = new Date(jawaban.created_at).toLocaleString('id-ID', {
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+                row.innerHTML = `
+                    <td data-label="Judul Tugas:">${taskTitle}</td>
+                    <td data-label="No. Absen:">${studentAbsen}</td>
+                    <td data-label="Nama:">${studentName}</td>
+                    <td data-label="Jurusan:">${studentInfo}</td>
+                    <td data-label="File:"><a href="${jawaban.file_url}" target="_blank">Lihat File</a></td>
+                    <td data-label="Nilai:">${score}</td>
+                    <td data-label="Waktu Pengumpulan:">${formattedDate}</td>
+                    <td style="text-align: center;">
+                        <button class="nilai-btn" data-id="${jawaban.id_jawaban}" data-skor="${jawaban.skor !== null ? jawaban.skor : ''}">Nilai</button>
+                    </td>
+                    `;
+                
+                tableBody.appendChild(row);
+            });
+
+            document.querySelectorAll('.nilai-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    selectedJawabanId = e.target.dataset.id;
+                    const skor = e.target.dataset.skor;
+                    document.querySelector('#nilaiForm input[name="skor"]').value = skor;
+                    document.getElementById('nilaiModal').style.display = 'block';
+                });
+            });
         }
-        query = query.eq('id_tugas', tugasData.id_tugas);
-    }
-
-    const { data, error } = await query.order('created_at', { ascending: false });
-
-    if (error) {
-        console.error('Gagal mengambil data:', error);
-        tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Gagal memuat data.</td></tr>';
-        return;
-    }
-
-    // Simpan data yang sudah difilter
-    currentFilteredData = data;
-
-    // Bersihkan tabel sebelum menambahkan data baru
-    tableBody.innerHTML = '';
-    
-    if (data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Tidak ada data yang ditemukan.</td></tr>';
-        return;
-    }
-
-    const hasUserWithData = data.some(jawaban => jawaban.user);
-
-    if (!hasUserWithData) {
-        tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: red;">Data pengguna tidak ditemukan.</td></tr>';
-        return;
-    }
-
-    // Membangun ulang tabel dengan data yang sudah difilter
-    data.forEach(jawaban => {
-
-        if (!jawaban.user){
-            return;
-        }
-
-        const row = document.createElement('tr');
-        const taskTitle = jawaban.tugas?.judul || 'Judul Tidak Ditemukan';
-        const studentAbsen = jawaban.user?.absen || '-';
-        const studentName = jawaban.user?.nama || 'Nama Tidak Ditemukan';
-        const studentInfo = `${jawaban.user?.kelas || ''} - ${jawaban.user?.jurusan || ''}`.trim();
-        const score = jawaban.skor !== null ? jawaban.skor : '-';
-        const formattedDate = new Date(jawaban.created_at).toLocaleString('id-ID', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit', second: '2-digit'
-        });
-        row.innerHTML = `
-            <td>${taskTitle}</td>
-            <td>${studentAbsen}</td>
-            <td>${studentName}</td>
-            <td>${studentInfo}</td>
-            <td><a href="${jawaban.file_url}" target="_blank">Lihat File</a></td>
-            <td>${score}</td>
-            <td>${formattedDate}</td>
-            <td style="text-align: center;">
-                <button class="nilai-btn" data-id="${jawaban.id_jawaban}" data-skor="${jawaban.skor !== null ? jawaban.skor : ''}">Nilai</button>
-            </td>
-            `;
-        
-        tableBody.appendChild(row);
-    });
-
-    // Event listener untuk tombol "Nilai"
-    document.querySelectorAll('.nilai-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            selectedJawabanId = e.target.dataset.id;
-            const skor = e.target.dataset.skor;
-            document.querySelector('#nilaiForm input[name="skor"]').value = skor;
-            document.getElementById('nilaiModal').style.display = 'block';
-        });
-    });
-}
 
         // Fungsi untuk memperbarui nama pengguna di header
         async function updateUserName() {
@@ -214,7 +211,6 @@ async function loadAndFilterJawaban() {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Data Jawaban Siswa');
             
-            // Mengambil nilai filter untuk judul laporan
             const selectedKelas = document.getElementById('filterKelas').value;
             const selectedJurusan = document.getElementById('filterJurusan').value;
             const selectedTugas = document.getElementById('filterTugas').value;
@@ -239,7 +235,6 @@ async function loadAndFilterJawaban() {
             headerRow.font = { bold: true };
             headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-            // Mengisi data dari variabel global yang sudah difilter
             currentFilteredData.forEach(jawaban => {
                 const studentAbsen = jawaban.user?.absen || '';
                 const studentName = jawaban.user?.nama || '';
@@ -260,7 +255,6 @@ async function loadAndFilterJawaban() {
                 ]);
             });
             
-            // Mengatur lebar kolom dan gaya
             worksheet.columns = [
                 { width: 8 },
                 { width: 28 },
@@ -293,7 +287,7 @@ async function loadAndFilterJawaban() {
             if (session) {
                 console.log('Login OK:', session.user.email);
                 await populateFilters();
-                loadAndFilterJawaban(); // Panggil fungsi ini untuk pertama kali
+                loadAndFilterJawaban('created_at', 'desc'); // Panggil fungsi ini untuk pertama kali dengan sort default
                 updateUserName();
             } else {
                 supabase.auth.onAuthStateChange((event, session) => {
@@ -304,11 +298,16 @@ async function loadAndFilterJawaban() {
             }
 
             // Tambahkan event listener untuk filter
-            document.getElementById('filterKelas').addEventListener('change', loadAndFilterJawaban);
-            document.getElementById('filterJurusan').addEventListener('change', loadAndFilterJawaban);
-            document.getElementById('filterTugas').addEventListener('change', loadAndFilterJawaban);
+            document.getElementById('filterKelas').addEventListener('change', () => loadAndFilterJawaban());
+            document.getElementById('filterJurusan').addEventListener('change', () => loadAndFilterJawaban());
+            document.getElementById('filterTugas').addEventListener('change', () => loadAndFilterJawaban());
+            
+            // Tambahkan event listener untuk sort
+            document.getElementById('sortOrder').addEventListener('change', () => {
+                const [sortBy, sortOrder] = document.getElementById('sortOrder').value.split('-');
+                loadAndFilterJawaban(sortBy, sortOrder);
+            });
 
-            // Event listener untuk tombol logout dan modal penilaian (Tidak diubah)
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', async () => {
@@ -436,6 +435,14 @@ async function loadAndFilterJawaban() {
         <label for="filterTugas">Filter Tugas:</label>
         <select id="filterTugas">
             <option value="">Semua Tugas</option>
+        </select>
+
+        <label for="sortOrder">Urutkan Berdasarkan:</label>
+        <select id="sortOrder">
+            <option value="absen-asc">No. Absen (Kecil-Besar)</option>
+            <option value="absen-desc">No. Absen (Besar-Kecil)</option>
+            <option value="created_at-asc">Waktu Pengumpulan (Terawal)</option>
+            <option value="created_at-desc" selected>Waktu Pengumpulan (Terakhir)</option>
         </select>
     </div>
 
