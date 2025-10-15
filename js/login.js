@@ -38,10 +38,10 @@ if (loginForm) {
 
         alert(`Selamat Datang, ${userData.role} ${userData.nama}!`);
 
-        if (userData.role === 'Siswa') {
-            window.location.href = 'home.html';
-        } else {
+        if (userData.role === 'Guru') {
             window.location.href = 'admin.html';
+        } else {
+            window.location.href = 'home.html';
         }
     });
 }
